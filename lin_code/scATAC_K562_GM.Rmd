@@ -1,0 +1,344 @@
+---
+title: "scATAC_GM_K562"
+author: "Zhixiang Lin"
+date: "2/2/2017"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## GM, 5000 regions
+
+```{r echo=TRUE, message=FALSE, tidy=TRUE, tidy.opts=list(width.cutoff=60)}
+library(rafalib)
+GM <- as.matrix(read.table("~/Documents/collaboration/mahdi/scATAC/GM_5000.txt"))
+
+check_bimodal <- function(x, perc1, perc2, thres1, thres2){
+  (((sum(x<=thres1)/length(x)) >= perc1) & ((sum(x>=thres2)/length(x)) >= perc2)) + 0
+}
+
+
+labs_GM <- apply(GM, 1, check_bimodal, 0.3, 0.3, 1, 100)
+row.names(GM) <- 1:5000
+mypar(mfrow=c(1,1))
+heatmap(t(GM[which(labs_GM==1),]))
+```
+
+```{r echo=TRUE, message=FALSE, tidy=TRUE, tidy.opts=list(width.cutoff=60)}
+mypar(mfrow=c(2,2))
+hist(GM[7,], breaks=30)
+hist(GM[393,], breaks=30)
+hist(GM[4,], breaks=30)
+hist(GM[68,], breaks=30)
+```
+
+## GM, 5000 regions, check robustness of the clusters
+
+Binarize the data matrix, fold-change>50 open(1); otherwise close(0)
+
+```{r echo=TRUE, message=FALSE, tidy=TRUE, tidy.opts=list(width.cutoff=60)}
+data <- t(GM[which(labs_GM==1),])
+data_thres <- data
+thres <- 50
+data_thres[which(data>=thres)] <- 1
+data_thres[which(data<thres)] <- 0
+
+kmean <- kmeans(data, centers=2, nstart=500)$cluster
+kmean_thres <- kmeans(data_thres, centers=2, nstart=500)$cluster
+# check cluster consistency
+table(kmean)
+table(kmean_thres)
+table(kmean_thres[which(kmean==1)])
+table(kmean_thres[which(kmean==2)])
+purity <- (max(table(kmean_thres[which(kmean==1)])) + max(table(kmean_thres[which(kmean==2)])))/nrow(data)
+print(paste("purity: ", purity))
+# random cluster
+kmean_thres_random <- sample(kmean_thres)
+table(kmean_thres_random[which(kmean==1)])
+table(kmean_thres_random[which(kmean==2)])
+purity_random <- (max(table(kmean_thres_random[which(kmean==1)])) + max(table(kmean_thres_random[which(kmean==2)])))/nrow(data)
+print(paste("purity random: ", purity_random))
+```
+
+Heatmap after binarization
+
+```{r echo=TRUE, message=FALSE, tidy=TRUE, tidy.opts=list(width.cutoff=60)}
+mypar(mfrow=c(1,1))
+heatmap(data_thres, scale = "none", col = c("white", "black"))
+```
+
+## GM, 100,000 regions
+
+Check overall distribution of fold change
+
+```{r echo=TRUE, message=FALSE, tidy=TRUE, tidy.opts=list(width.cutoff=60)}
+dataA <- read.csv("~/Documents/collaboration/mahdi/scATAC/GM12878.csv", header = FALSE)
+dataA <- as.matrix(dataA)
+boxplot(log2(dataA[,sample(ncol(dataA), 10)]+1), ylab="log fold change")
+```
+
+What does the distribution for the non-zero log fold change look like per sample?
+
+```{r echo=TRUE, message=FALSE, tidy=TRUE, tidy.opts=list(width.cutoff=60)}
+set.seed(123)
+mypar(mfrow=c(3,3))
+nsam <- 9
+for (sam in 1:nsam){
+  lab <- sample(ncol(dataA), 1)
+  tmp <- log2(dataA[,lab]+1)
+  hist(tmp[tmp!=0], breaks=200, xlab=paste("sample", lab), main="")
+}
+```
+
+Number of non-zero fold change per sample
+
+```{r echo=TRUE, message=FALSE, tidy=TRUE, tidy.opts=list(width.cutoff=60)}
+fc <- apply(dataA, 2, function(x){sum(x!=0)})
+summary(fc)
+mypar(mfrow=c(1, 1))
+boxplot(fc, ylab="distribution for the number of fold change (exclude 0s), per sample")
+```
+
+Binarize the data matrix, boxplot for the number of peaks per sample
+
+```{r echo=TRUE, message=FALSE, tidy=TRUE, tidy.opts=list(width.cutoff=60)}
+thres <- 50
+dataA_bin <- dataA
+dataA_bin[dataA>=thres] <- 1
+dataA_bin[dataA<thres] <- 0
+peak_numberA <- colSums(dataA_bin)
+### two problematic samples, sample 301 and 316
+which(is.na(peak_numberA))
+boxplot(peak_numberA)
+```
+
+Binarize the data matrix, boxplot for the number of peaks per sample, stratified by the cluster label
+
+```{r echo=TRUE, message=FALSE, tidy=TRUE, tidy.opts=list(width.cutoff=60)}
+mypar(mfrow=c(1,2))
+boxplot(peak_numberA~kmean, xlab="cluster label, top bimodal regions")
+boxplot(peak_numberA~kmean_thres, xlab="cluster label, top bimodal regions, binarize")
+```
+
+We see that in some samples, more regions have very large fold changes. We need to some normalization/adjustment. For a sample, if the sequencing depth is shallow, it is less likely that there will be peaks with large fold change?
+
+For each sample, pick the top regions. Then do cluster based on the top regions
+
+```{r echo=TRUE, message=FALSE, tidy=TRUE, tidy.opts=list(width.cutoff=60)}
+top <- 1000
+# samples with less than top regions 
+dataA_sub <- dataA[,which(fc>top)]
+# the labels
+labs <- apply(dataA_sub, 2, function(x, top){(order(x, decreasing = T))[1:top]}, top)
+# binarize by picking the top regions
+dataA_sub_bin <- matrix(0, nrow=nrow(dataA_sub), ncol=ncol(dataA_sub))
+for (i in 1:ncol(dataA_sub)){
+  dataA_sub_bin[labs[,i],i] <- 1
+}
+dataA_sub_binRS <- rowSums(dataA_sub_bin)
+sum(dataA_sub_binRS==0)
+dataA_sub_bin_random <- apply(dataA_sub_bin, 2, sample)
+dataA_sub_bin_randomRS <- rowSums(dataA_sub_bin_random)
+sum(dataA_sub_bin_randomRS==0)
+mypar(mfrow=c(1,2))
+hist(dataA_sub_binRS, breaks=200)
+hist(dataA_sub_bin_randomRS, breaks=200)
+```
+
+```{r echo=TRUE, message=FALSE, tidy=TRUE, tidy.opts=list(width.cutoff=60)}
+# open in more than perc of the samples
+perc <- 0.15
+sum(dataA_sub_binRS>=perc*ncol(dataA_sub_bin))
+heatmap(t(dataA_sub_bin[which(dataA_sub_binRS>=perc*ncol(dataA_sub_bin)),]), scale = "none", col = c("white", "black"))
+```
+
+## GM, exclude low background reads
+
+Define distance based on the percentage of overlap regions, where both samples have reliable background estimate. This part runs on cluster.
+
+```{r, eval=FALSE, echo=TRUE, message=FALSE, tidy=TRUE, tidy.opts=list(width.cutoff=60)}
+dataAll <- read.csv("/scratch/PI/whwong/mzamani/Shining/GM12878.csv", header = FALSE)
+dataAll <- as.matrix(dataAll)
+
+cutoffs <- seq(20, 100, 20)
+thress <- c(0, 10, 20, 50)
+
+for (thres in thress){
+  for (cutoff in cutoffs){
+    fn <- paste("cutoff_", cutoff, "_thres_", thres, ".rda", sep="")
+    fn_count <- paste("cutoff_", cutoff, "_thres_", thres, "_numregions.rda", sep="")
+    datasub <- read.csv(paste("/scratch/PI/whwong/mzamani/Shining/GM", cutoff, ".csv", sep=""),      header = FALSE)
+    datasub <- as.matrix(datasub)
+
+    bad_background <- (datasub!=dataAll) + 0
+    distm <- matrix(0, nrow=ncol(dataAll), ncol=ncol(dataAll))
+    numregions <- matrix(0, nrow=ncol(dataAll), ncol=ncol(dataAll))
+    for (i in 1:(ncol(dataAll)-1)){
+      print(i)
+      for (j in (i+1):ncol(dataAll)){
+        filter1 <- datasub[,i]<=thres & datasub[,j]<=thres
+        filter2 <- bad_background[,i]==1 | bad_background[,j]==1
+        d1 <- datasub[-which(filter1 | filter2),i]
+        d2 <- datasub[-which(filter1 | filter2),j]
+        distm[i,j] <- distm[j,i] <- 1-(sum(d1>0 & d2>0)/length(d1))
+        numregions[i,j] <- numregions[j,i] <- length(d1)
+      }
+    }
+    save(distm, file=fn)
+    save(numregions, file=fn_count)
+  }
+}
+```
+
+Plot the results from the cluster, 
+
+```{r, eval=FALSE, echo=TRUE, message=FALSE, tidy=TRUE, tidy.opts=list(width.cutoff=60)}
+cutoffs <- seq(20, 100, 20)
+thress <- c(0, 10, 20, 50)
+for (thres in thress){
+  for (cutoff in cutoffs){
+    fn <- paste("~/Documents/collaboration/mahdi/scATAC/cutoff_", cutoff, "_thres_", thres, ".rda", sep="")
+    load(fn)
+    # exclude the rows/columns with NA
+    if (sum(is.na(rowSums(distm)))){
+      distm <- distm[which(!is.na(rowSums(distm))),  which(!is.na(rowSums(distm)))]  
+    }
+    pdf(paste("~/Documents/collaboration/mahdi/scATAC/cutoff_", cutoff, "_thres_", thres, "_hclust.pdf", sep=""))
+    plot(hclust(as.dist(distm)))
+    dev.off()
+    
+    pdf(paste("~/Documents/collaboration/mahdi/scATAC/cutoff_", cutoff, "_thres_", thres, "_mds.pdf", sep=""))
+    plot(cmdscale(distm, k = 2))
+    dev.off()
+  }
+}
+
+## power of distm
+library(gplots)
+cutoffs <- seq(20, 100, 20)
+thress <- c(0, 10, 20, 50)
+for (thres in thress){
+  for (cutoff in cutoffs){
+    fn <- paste("~/Documents/collaboration/mahdi/scATAC/cutoff_", cutoff, "_thres_", thres, ".rda", sep="")
+    load(fn)
+    # exclude the rows/columns with NA
+    if (sum(is.na(rowSums(distm)))){
+      labs <- (1:ncol(distm))[which(!is.na(rowSums(distm)))]
+      distm <- distm[which(!is.na(rowSums(distm))),  which(!is.na(rowSums(distm)))]  
+    }
+    colnames(distm) <- labs
+    rownames(distm) <- labs
+    power <- 3
+    pdf(paste("~/Documents/collaboration/mahdi/scATAC/cutoff_", cutoff, "_thres_", thres, "_power_", power, "_heatmap.pdf", sep=""))
+    heatmap.2(distm^power, Colv="Rowv",trace='none', main=paste("nsam=", ncol(distm), ", power=", power, sep=""))
+    dev.off()
+    power <- 1
+        pdf(paste("~/Documents/collaboration/mahdi/scATAC/cutoff_", cutoff, "_thres_", thres, "_power_", power, "_heatmap.pdf", sep=""))
+    heatmap.2(distm^power, Colv="Rowv",trace='none', main=paste("nsam=", ncol(distm), ", power=", power, sep=""))
+    dev.off()
+  }
+}
+
+## check the number of regions for each pair of samples
+cutoffs <- seq(20, 100, 20)
+thress <- c(0, 10, 20, 50)
+for (thres in thress){
+  for (cutoff in cutoffs){
+    fn <- paste("~/Documents/collaboration/mahdi/scATAC/cutoff_", cutoff, "_thres_", thres, ".rda", sep="")
+    load(fn)
+    fnnum <- paste("~/Documents/collaboration/mahdi/scATAC/cutoff_", cutoff, "_thres_", thres, "_numregions.rda", sep="")
+    load(fnnum)
+    
+    distmUP <- distm[which(upper.tri(distm))]
+    numregionsUP <- numregions[which(upper.tri(numregions))]
+    # exclude the rows/columns with NA
+    if (sum(is.na(rowSums(distm)))){
+      labs <- (1:ncol(distm))[which(!is.na(rowSums(distm)))]
+      distm <- distm[labs, labs]  
+      numregions <- numregions[labs, labs] 
+    }
+    colnames(distm) <- labs
+    rownames(distm) <- labs
+    power <- 3
+    
+    
+    
+    a <- heatmap.2(distm^power, Colv="Rowv",trace='none', main=paste("nsam=", ncol(distm), ", power=", power, sep=""))
+    
+    cluster <- cutree(as.hclust(a$rowDendrogram), k = 2)
+    
+    num22 <- numregions[which(cluster==2),which(cluster==2)]
+    num11 <- numregions[which(cluster==1),which(cluster==1)]
+    
+    hist(log10(num22[which(upper.tri(num22))]+1), breaks=200, freq=F, xlim=c(0, 5))
+    hist(log10(num11[which(upper.tri(num11))]+1), breaks=200, freq=F, add=T, col="red")
+    
+
+  }
+}
+```
+
+```{r echo=TRUE, message=FALSE, tidy=TRUE, tidy.opts=list(width.cutoff=60)}
+col.names(distm) <- row.names(distm) <- 1:ncol(distm)
+hclust(dist)
+```
+
+```{r echo=TRUE, message=FALSE, tidy=TRUE, tidy.opts=list(width.cutoff=60)}
+hist(numregions[which(upper.tri(numregions))], breaks=100)
+```
+
+## K562, 5000 regions
+```{r echo=TRUE, message=FALSE, tidy=TRUE, tidy.opts=list(width.cutoff=60)}
+K562 <- as.matrix(read.table("~/Documents/collaboration/mahdi/scATAC/K562_5000.txt"))
+labs_K562 <- apply(K562, 1, check_bimodal, 0.3, 0.1, 1, 20)
+sum(labs_K562)
+row.names(K562) <- 1:5000
+mypar(mfrow=c(1,1))
+heatmap(t(K562[which(labs_K562==1),]))
+```
+
+```{r echo=TRUE, message=FALSE, tidy=TRUE, tidy.opts=list(width.cutoff=60)}
+mypar(mfrow=c(2,2))
+hist(K562[989,], breaks=30)
+hist(K562[1163,], breaks=30)
+hist(K562[3531,], breaks=30)
+hist(K562[2754,], breaks=30)
+```
+
+## K562, 5000 regions, check robustness of the clusters
+
+Binarize the data matrix, fold-change>20 open(1); otherwise close(0)
+
+```{r echo=TRUE, message=FALSE, tidy=TRUE, tidy.opts=list(width.cutoff=60)}
+data <- t(K562[which(labs_K562==1),])
+data_thres <- data
+thres <- 20
+data_thres[which(data>=thres)] <- 1
+data_thres[which(data<thres)] <- 0
+
+kmean <- kmeans(data, centers=2, nstart=500)$cluster
+kmean_thres <- kmeans(data_thres, centers=2, nstart=500)$cluster
+# check cluster consistency
+table(kmean)
+table(kmean_thres)
+table(kmean_thres[which(kmean==1)])
+table(kmean_thres[which(kmean==2)])
+purity <- (max(table(kmean_thres[which(kmean==1)])) + max(table(kmean_thres[which(kmean==2)])))/nrow(data)
+print(paste("purity: ", purity))
+# random cluster
+kmean_thres_random <- sample(kmean_thres)
+table(kmean_thres_random[which(kmean==1)])
+table(kmean_thres_random[which(kmean==2)])
+purity_random <- (max(table(kmean_thres_random[which(kmean==1)])) + max(table(kmean_thres_random[which(kmean==2)])))/nrow(data)
+print(paste("purity random: ", purity_random))
+```
+
+Heatmap after binarization
+
+```{r echo=TRUE, message=FALSE, tidy=TRUE, tidy.opts=list(width.cutoff=60)}
+mypar(mfrow=c(1,1))
+heatmap(data_thres, scale = "none", col = c("white", "black"))
+```
+

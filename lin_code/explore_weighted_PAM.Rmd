@@ -1,0 +1,269 @@
+---
+title: "explore_weighted_PAM"
+author: "Zhixiang Lin"
+date: "March 3, 2017"
+output: pdf_document
+---
+
+```{r}
+library(readr)
+library(gplots)
+library(Heatplus)
+library(vegan)
+library(RColorBrewer)
+library(rafalib)
+library(ggdendro)
+library(ggplot2)
+library(gridExtra)
+library(cluster)
+library(WeightedCluster)
+```
+
+```{r}
+getClusterCount <- function(cluster, samples, cells){
+  clusterCount <- matrix(0, nrow=length(cells), ncol=length(cells))
+  for (i in 1:length(unique(cluster))){
+    tmp <- samples[which(cluster==i)]
+    for (j in 1:length(cells)){
+      cell <- cells[j]
+      clusterCount[i, j] <- sum(tmp==cell)
+    }
+  }
+  ## rearrange it, sometimes get an error
+  tmp <- apply(clusterCount, 2, which.max)
+  if (max(table(tmp))>1){
+    seqs <- c()
+    for (i in 1:nrow(clusterCount)){
+      if (i==1){
+        seqs <- c(seqs, which.max(clusterCount[,i])[1])
+      } 
+      if (i>1 & i<nrow(clusterCount)){
+        seqs <- c(seqs, c(c(1:nrow(clusterCount))[-seqs])[which.max(clusterCount[-seqs,i])[1]])  
+      }
+      if (i==nrow(clusterCount)){
+        seqs <- c(seqs, c(1:nrow(clusterCount))[-seqs]) 
+      }
+    }
+  } else {
+    seqs <- tmp
+  }
+  clusterCount <- clusterCount[seqs,]
+  row.names(clusterCount) <- paste("cluster", 1:6)
+  colnames(clusterCount) <- cells
+  return(clusterCount)
+}
+
+getCorrect <- function(clusterCount, samples){
+  return(c( sum(apply(clusterCount, 1, max)),  sum(apply(clusterCount, 1, max))/length(samples)) )
+}
+
+```
+Load large subset
+
+desktop
+
+```{r, eval=FALSE}
+data <- read_csv("C:/Users/Zhixiang/Data/CellLines6/SelectedPeaksLargeSub/ForeGround.csv", col_names = FALSE)
+data <- as.matrix(data)
+samples <- read_delim("C:/Users/Zhixiang/Data/CellLines6/SelectedPeaksLargeSub/SampleOrder.txt", "\t", escape_double = FALSE, col_names = FALSE, trim_ws = TRUE)
+background <- read_csv("C:/Users/Zhixiang/Data/CellLines6/SelectedPeaksLargeSub/BackGround.csv", col_names = FALSE)
+background <- as.matrix(background)
+samples <- samples[,2][[1]]
+table(samples)
+cells <- c("K562", "GM12878", "HL-60", "BJ", "TF-1", "H1")
+```
+
+laptop
+
+```{r, eval=FALSE}
+data <- read_csv("~/Documents/collaboration/mahdi/scATAC/SelctedPeaksLargeSub/ForeGround.csv", col_names = FALSE)
+data <- as.matrix(data)
+samples <- read_delim("~/Documents/collaboration/mahdi/scATAC/SelctedPeaksLargeSub/SampleOrder.txt", "\t", escape_double = FALSE, col_names = FALSE, trim_ws = TRUE)
+background <- read_csv("~/Documents/collaboration/mahdi/scATAC/SelctedPeaksLargeSub/BackGround.csv", col_names = FALSE)
+background <- as.matrix(background)
+samples <- samples[,2][[1]]
+table(samples)
+cells <- c("K562", "GM12878", "HL-60", "BJ", "TF-1", "H1")
+```
+
+```{r}
+dataColSum <- colSums(data)
+```
+
+```{r}
+hist(dataColSum, breaks=100)
+```
+
+```{r}
+backgroundMedian <- apply(background, 2, median)
+backgroundColSum <- colSums(background)
+```
+
+```{r}
+hist(backgroundMedian, breaks=100)
+```
+
+```{r}
+hist(backgroundMedian, breaks=100)
+```
+
+```{r}
+plot(dataColSum, backgroundColSum, cex=0.3, pch=20)
+```
+
+```{r}
+plot(dataColSum, backgroundMedian, cex=0.3, pch=20)
+```
+
+```{r}
+hist(backgroundMedian, breaks=200)
+```
+
+calculate distance
+
+```{r}
+distS <- 1-cor(data, method="spearman")
+resultpamS <- pam(x=distS, k=6, diss = TRUE)
+clusterS <- resultpamS$clustering
+```
+
+check clusters. 
+
+```{r}
+getClusterCount(clusterS, samples, cells)
+```
+
+weighted version
+
+```{r}
+w1 <- backgroundMedian
+w1[which(backgroundMedian>5)] <- 1
+w1[which(backgroundMedian<5)] <- 0.5
+resultpamSWeight <- wcKMedoids(distS, k=6, weights=w1)
+clusterw1 <- resultpamSWeight$clustering
+clusterw1 <- as.numeric(factor(clusterw1))
+getClusterCount(clusterw1, samples, cells)
+```
+
+```{r}
+w2 <- backgroundMedian
+w2[which(backgroundMedian>5)] <- 1
+w2[which(backgroundMedian<5)] <- 0.1
+resultpamSWeight2 <- wcKMedoids(distS, k=6, weights=w2)
+clusterw2 <- resultpamSWeight2$clustering
+clusterw2 <- as.numeric(factor(clusterw2))
+getClusterCount(clusterw2, samples, cells)
+print(sum(diag(getClusterCount(clusterw2, samples, cells))))
+```
+
+Try sigmoid function. $\frac{1}{1+\exp^{-\lambda(x-a)}}$ 
+
+```{r}
+lambda <- 1
+a <- 8
+W <- 1/(1+exp(-lambda*(backgroundMedian-a)))
+resultpamSW <- wcKMedoids(distS, k=6, weights=W)
+clusterW <- resultpamSW$clustering
+clusterW <- as.numeric(factor(clusterW))
+clusterCount <- getClusterCount(clusterW, samples, cells)
+clusterCount
+getCorrect(clusterCount, samples)
+```
+
+A merging step
+
+```{r}
+ncenters <- length(unique(clusterW))
+clustercenter <- c()
+  for (i in 1:ncenters){
+    tmp <- which(clusterW==i)
+    if (length(tmp)==1){
+        clustercenter <- cbind(clustercenter, data[,tmp]  )  
+    } else {
+        clustercenter <- cbind(clustercenter, rowSums(data[,tmp])  ) 
+    }
+}
+scor <- cor(data, clustercenter, method="spearman")
+clusterWK <- apply(scor, 1, which.max) 
+clusterCount <- getClusterCount(clusterWK, samples, cells)
+clusterCount
+getCorrect(clusterCount, samples)
+```
+
+```{r}
+selectTop <- function(x, top){
+  thres <- sort(x, decreasing=T)[top]
+  x[x<thres] <- 0
+  return(x)
+}
+```
+
+```{r}
+top <- 2000
+clustercenterT <- apply(clustercenter, 2, selectTop, top)
+scorT <- cor(data, clustercenterT, method="spearman")
+clusterWKT <- apply(scorT, 1, which.max) 
+clusterCountT <- getClusterCount(clusterWKT, samples, cells)
+clusterCountT
+getCorrect(clusterCountT, samples)
+```
+
+Do a grid search
+
+```{r}
+lambdas <- seq(0.2, 3, 0.2) 
+as <- seq(2, 15, 1)
+accA <- matrix(nrow=length(lambdas),  ncol=length(as))
+for (i in 1:length(lambdas)){
+  print(i)
+  for (j in 1:length(as)){
+    lambda <- lambdas[i]
+    a <- as[j]
+    W <- 1/(1+exp(-lambda*(backgroundMedian-a)))
+    resultpamSW <- wcKMedoids(distS, k=6, weights=W)
+    clusterW <- resultpamSW$clustering
+    clusterW <- as.numeric(factor(clusterW))
+    clusterCount <- getClusterCount(clusterW, samples, cells)
+    accA[i,j] <- getCorrect(clusterCount, samples)[1]
+  }
+}
+colnames(accA) <- as
+rownames(accA) <- lambdas
+print(accA)
+```
+
+all the cells
+
+```{r, eval=FALSE}
+data <- read_csv("~/Documents/collaboration/mahdi/scATAC/SelectedPeaksAllSample/ForeGround.csv", col_names = FALSE)
+data <- as.matrix(data)
+samples <- read_delim("~/Documents/collaboration/mahdi/scATAC/SelectedPeaksAllSample/SampleOrder.txt", "\t", escape_double = FALSE, col_names = FALSE, trim_ws = TRUE)
+background <- read_csv("~/Documents/collaboration/mahdi/scATAC/SelectedPeaksAllSample/BackGround.csv", col_names = FALSE)
+background <- as.matrix(background)
+samples <- samples[,2][[1]]
+table(samples)
+cells <- c("K562", "GM12878", "HL-60", "BJ", "TF-1", "H1")
+```
+
+```{r}
+backgroundMedian <- apply(background, 2, median)
+labs <- which(colSums(data)!=0)
+data <- data[,labs]
+backgroundMedian <- backgroundMedian[labs]    
+samples <- samples[labs]
+distS <- 1-cor(data, method="spearman")
+resultpamS <- pam(x=distS, k=6, diss = TRUE)
+clusterS <- resultpamS$clustering
+getClusterCount(clusterS, samples, cells)
+```
+
+```{r}
+lambda <- 1
+a <- 8
+W <- 1/(1+exp(-lambda*(backgroundMedian-a)))
+resultpamSW <- wcKMedoids(distS, k=6, weights=W)
+clusterW <- resultpamSW$clustering
+clusterW <- as.numeric(factor(clusterW))
+clusterCount <- getClusterCount(clusterW, samples, cells)
+clusterCount
+```

@@ -1,0 +1,523 @@
+---
+title: "Explore scATAC-Seq, 6 cell lines-2"
+author: "Zhixiang Lin"
+date: "2/21/2017"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+A subset of cells (~1,000) with large number of reads are retained.
+
+## Clustering after collapsing cells, randomly collapse 20 cells. 
+
+For each sample, pick the top peaks, calculate the percentage of overlap
+
+```{r}
+set.seed(123)
+library(gplots)
+caloverlap <- function(x, y, top){
+  xtmp <- 0*x
+  ytmp <- 0*y
+  xtmp[order(x, decreasing=T)[1:top]] <- 1  
+  ytmp[order(y, decreasing=T)[1:top]] <- 1 
+  sum((xtmp+ytmp)==2)/top
+}
+```
+
+```{r}
+coll <- 20
+top <- 2000
+fn <- paste("/Users/zhixianglin/Documents/collaboration/mahdi/scATAC/CellLines6/dataColl",coll, ".rda", sep="")
+load(fn)
+data <- dataColl20$ForGroundC
+cells <- dataColl20$SampleSubC
+num <- ncol(data)
+distM <- matrix(0, ncol(data), ncol(data))
+for (i in 1:(ncol(data)-1)){
+  for (j in (i+1):ncol(data)){
+    distM[i,j] <- 1 - caloverlap(data[,i],data[,j],top)
+  }
+}
+distM <- distM + t(distM)
+colnames(distM) <- cells
+rownames(distM) <- cells
+heatmap.2(distM, symm = TRUE, dendrogram="column", trace="none", main=paste("collapse", coll, ", top", top, "peaks"))
+```
+
+```{r}
+top <- 1000
+distM <- matrix(0, ncol(data), ncol(data))
+for (i in 1:(ncol(data)-1)){
+  for (j in (i+1):ncol(data)){
+    distM[i,j] <- 1 - caloverlap(data[,i],data[,j],top)
+  }
+}
+distM <- distM + t(distM)
+colnames(distM) <- cells
+rownames(distM) <- cells
+heatmap.2(distM, symm = TRUE, dendrogram="column", trace="none", main=paste("collapse", coll, ", top", top, "peaks"))
+```
+
+```{r}
+top <- 5000
+distM <- matrix(0, ncol(data), ncol(data))
+for (i in 1:(ncol(data)-1)){
+  for (j in (i+1):ncol(data)){
+    distM[i,j] <- 1 - caloverlap(data[,i],data[,j],top)
+  }
+}
+distM <- distM + t(distM)
+colnames(distM) <- cells
+rownames(distM) <- cells
+heatmap.2(distM, symm = TRUE, dendrogram="column", trace="none", main=paste("collapse", coll, ", top", top, "peaks"))
+```
+
+Euclidean distance after normalize by total reads in the peak
+
+```{r}
+cs <- colSums(data)
+normfactor1 <- 1/cs*median(cs)
+
+distM <- as.matrix(dist(t(data*normfactor1)))
+colnames(distM) <- cells
+rownames(distM) <- cells
+heatmap.2(distM, symm = TRUE, dendrogram="column", trace="none", main=paste("collapse", coll, "Euclidean, total"))
+```
+
+Euclidean distance after upper-quartile normalization, note that the upper-quartile is still small
+
+```{r}
+uq <- apply(data, 2, function(x){quantile(x[x!=0], 0.75)})
+print(uq)
+```
+
+```{r}
+normfactor2 <- 1/uq*median(uq)
+distM <- as.matrix(dist(t(data*normfactor2)))
+colnames(distM) <- cells
+rownames(distM) <- cells
+heatmap.2(distM, symm = TRUE, dendrogram="column", trace="none", main=paste("collapse", coll, "Euclidean, UQ"))
+```
+
+Spearman correlation
+
+```{r}
+datascor <- 1-cor(data, method="spearman")
+colnames(datascor) <- cells
+rownames(datascor) <- cells
+heatmap.2(datascor, symm = TRUE, dendrogram="column", trace="none", main=paste("collapse", coll, "Spearman"))
+```
+
+## Clustering after collapsing cells, randomly collapse 10 cells. 
+
+```{r}
+coll <- 10
+fn <- paste("/Users/zhixianglin/Documents/collaboration/mahdi/scATAC/CellLines6/dataColl",coll, ".rda", sep="")
+load(fn)
+data <- dataColl10$ForGroundC
+cells <- dataColl10$SampleSubC
+print(table(data[,1]))
+```
+
+```{r}
+sub <- sample(ncol(data), round(ncol(data)/2))
+data <- data[,sub]
+cells <- cells[sub]
+num <- ncol(data)
+```
+
+```{r}
+top <- 1000
+distM <- matrix(0, ncol(data), ncol(data))
+for (i in 1:(ncol(data)-1)){
+  for (j in (i+1):ncol(data)){
+    distM[i,j] <- 1 - caloverlap(data[,i],data[,j],top)
+  }
+}
+distM <- distM + t(distM)
+colnames(distM) <- cells
+rownames(distM) <- cells
+heatmap.2(distM, symm = TRUE, dendrogram="column", trace="none", main=paste("collapse", coll, ", top", top, "peaks"))
+```
+
+```{r}
+top <- 2000
+distM <- matrix(0, ncol(data), ncol(data))
+for (i in 1:(ncol(data)-1)){
+  for (j in (i+1):ncol(data)){
+    distM[i,j] <- 1 - caloverlap(data[,i],data[,j],top)
+  }
+}
+distM <- distM + t(distM)
+colnames(distM) <- cells
+rownames(distM) <- cells
+heatmap.2(distM, symm = TRUE, dendrogram="column", trace="none", main=paste("collapse", coll, ", top", top, "peaks"))
+```
+
+```{r}
+top <- 5000
+distM <- matrix(0, ncol(data), ncol(data))
+for (i in 1:(ncol(data)-1)){
+  for (j in (i+1):ncol(data)){
+    distM[i,j] <- 1 - caloverlap(data[,i],data[,j],top)
+  }
+}
+distM <- distM + t(distM)
+colnames(distM) <- cells
+rownames(distM) <- cells
+heatmap.2(distM, symm = TRUE, dendrogram="column", trace="none", main=paste("collapse", coll, ", top", top, "peaks"))
+```
+
+## Clustering after collapsing cells, randomly collapse 5 cells. 
+
+```{r}
+coll <- 5
+fn <- paste("/Users/zhixianglin/Documents/collaboration/mahdi/scATAC/CellLines6/dataColl",coll, ".rda", sep="")
+load(fn)
+data <- dataColl5$ForGroundC
+cells <- dataColl5$SampleSubC
+print(table(data[,1]))
+```
+
+```{r}
+sub <- sample(ncol(data), round(ncol(data)/4))
+data <- data[,sub]
+cells <- cells[sub]
+```
+
+```{r}
+top <- 1000
+distM <- matrix(0, ncol(data), ncol(data))
+for (i in 1:(ncol(data)-1)){
+  for (j in (i+1):ncol(data)){
+    distM[i,j] <- 1 - caloverlap(data[,i],data[,j],top)
+  }
+}
+distM <- distM + t(distM)
+colnames(distM) <- cells
+rownames(distM) <- cells
+heatmap.2(distM, symm = TRUE, dendrogram="column", trace="none", main=paste("collapse", coll, ", top", top, "peaks"))
+```
+
+```{r}
+top <- 2000
+distM <- matrix(0, ncol(data), ncol(data))
+for (i in 1:(ncol(data)-1)){
+  for (j in (i+1):ncol(data)){
+    distM[i,j] <- 1 - caloverlap(data[,i],data[,j],top)
+  }
+}
+distM <- distM + t(distM)
+colnames(distM) <- cells
+rownames(distM) <- cells
+heatmap.2(distM, symm = TRUE, dendrogram="column", trace="none", main=paste("collapse", coll, ", top", top, "peaks"))
+```
+
+```{r}
+top <- 5000
+distM <- matrix(0, ncol(data), ncol(data))
+for (i in 1:(ncol(data)-1)){
+  for (j in (i+1):ncol(data)){
+    distM[i,j] <- 1 - caloverlap(data[,i],data[,j],top)
+  }
+}
+distM <- distM + t(distM)
+colnames(distM) <- cells
+rownames(distM) <- cells
+heatmap.2(distM, symm = TRUE, dendrogram="column", trace="none", main=paste("collapse", coll, ", top", top, "peaks"))
+```
+
+## Do not collapse, pick a subset of cells
+
+```{r}
+set.seed(123)
+fn <- paste("/Users/zhixianglin/Documents/collaboration/mahdi/scATAC/CellLines6/dataSub30.rda")
+load(fn)
+names(dataSub30)
+data <- dataSub30$ForGroundSub
+cells <- dataSub30$SampleSub
+```
+
+The number of non-zeros
+
+```{r}
+sub <- sample(ncol(data), 50)
+data <- data[,sub]
+cells <- cells[sub]
+colSums(data!=0)
+min(colSums(data!=0))
+```
+
+```{r}
+top <- 1000
+distM <- matrix(0, ncol(data), ncol(data))
+for (i in 1:(ncol(data)-1)){
+  for (j in (i+1):ncol(data)){
+    distM[i,j] <- 1 - caloverlap(data[,i],data[,j],top)
+  }
+}
+distM <- distM + t(distM)
+colnames(distM) <- cells
+rownames(distM) <- cells
+heatmap.2(distM, symm = TRUE, dendrogram="column", trace="none", main=paste("single cell", ", top", top, "peaks"))
+```
+
+```{r}
+top <- 2000
+distM <- matrix(0, ncol(data), ncol(data))
+for (i in 1:(ncol(data)-1)){
+  for (j in (i+1):ncol(data)){
+    distM[i,j] <- 1 - caloverlap(data[,i],data[,j],top)
+  }
+}
+distM <- distM + t(distM)
+colnames(distM) <- cells
+rownames(distM) <- cells
+heatmap.2(distM, symm = TRUE, dendrogram="column", trace="none", main=paste("single cell", ", top", top, "peaks"))
+```
+
+```{r}
+top <- 500
+distM <- matrix(0, ncol(data), ncol(data))
+for (i in 1:(ncol(data)-1)){
+  for (j in (i+1):ncol(data)){
+    distM[i,j] <- 1 - caloverlap(data[,i],data[,j],top)
+  }
+}
+distM <- distM + t(distM)
+colnames(distM) <- cells
+rownames(distM) <- cells
+heatmap.2(distM, symm = TRUE, dendrogram="column", trace="none", main=paste("single cell", ", top", top, "peaks"))
+```
+
+## Clearly, when more cells are collapsed, the clusters become more separated.
+
+## Idea: modification of the k-means algorithm, instead of calculating the mean, use some robust statistics for calculating the distance. Basiclly we need to aggregate cells to lower the noise level, while allowing dissimilar cells to go out/similar cells to go in. Also applies to Drop-Seq data.
+
+## Use fold-change
+
+Calculate window size
+
+```{r}
+spots <- dataSub30$spots
+ws <- spots[,3] - spots[,2] + 1
+```
+
+Calculate fold-change, collapse 20
+
+```{r}
+coll <- 20
+top <- 2000
+fn <- paste("/Users/zhixianglin/Documents/collaboration/mahdi/scATAC/CellLines6/dataColl",coll, ".rda", sep="")
+load(fn)
+dataF <- dataColl20$ForGroundC
+dataB <- dataColl20$BackGroundC
+cells <- dataColl20$SampleSubC
+## filter low background
+Bmin <- apply(dataB, 1, min)
+thres <- 10
+peak_sub <- which(Bmin>=thres)
+print(length(peak_sub))
+```
+
+```{r}
+dataF <- dataF[peak_sub,]
+dataB <- dataB[peak_sub,]
+## scale to make sure the fold change not too large/small
+fc <- dataF/dataB/ws[peak_sub]
+fc <- fc/median(fc[fc!=0])
+
+distM <- matrix(0, ncol(fc), ncol(fc))
+for (i in 1:(ncol(fc)-1)){
+  for (j in (i+1):ncol(fc)){
+    distM[i,j] <- 1 - caloverlap(fc[,i],fc[,j],top)
+  }
+}
+distM <- distM + t(distM)
+colnames(distM) <- cells
+rownames(distM) <- cells
+heatmap.2(distM, symm = TRUE, dendrogram="column", trace="none", main=paste("collapse", coll, ", top", top, "peaks, FC"))
+```
+
+Calculate fold-change, collapse 10
+
+```{r}
+coll <- 10
+top <- 2000
+fn <- paste("/Users/zhixianglin/Documents/collaboration/mahdi/scATAC/CellLines6/dataColl",coll, ".rda", sep="")
+load(fn)
+dataF <- dataColl10$ForGroundC
+dataB <- dataColl10$BackGroundC
+cells <- dataColl10$SampleSubC
+## filter low background
+Bmin <- apply(dataB, 1, min)
+thres <- 10
+peak_sub <- which(Bmin>=thres)
+dataF <- dataF[peak_sub,]
+dataB <- dataB[peak_sub,]
+print(length(peak_sub))
+```
+
+```{r}
+sub <- sample(ncol(dataF), round(ncol(dataF)/2))
+dataF <- dataF[,sub]
+dataB <- dataB[,sub]
+cells <- cells[sub]
+
+## scale to make sure the fold change not too large/small
+fc <- dataF/dataB/ws[peak_sub]
+fc <- fc/median(fc[fc!=0])
+
+distM <- matrix(0, ncol(fc), ncol(fc))
+for (i in 1:(ncol(fc)-1)){
+  for (j in (i+1):ncol(fc)){
+    distM[i,j] <- 1 - caloverlap(fc[,i],fc[,j],top)
+  }
+}
+distM <- distM + t(distM)
+colnames(distM) <- cells
+rownames(distM) <- cells
+heatmap.2(distM, symm = TRUE, dendrogram="column", trace="none", main=paste("collapse", coll, ", top", top, "peaks, FC"))
+```
+
+Calculate fold-change, collapse 5
+
+```{r}
+coll <- 5
+top <- 2000
+fn <- paste("/Users/zhixianglin/Documents/collaboration/mahdi/scATAC/CellLines6/dataColl",coll, ".rda", sep="")
+load(fn)
+dataF <- dataColl5$ForGroundC
+dataB <- dataColl5$BackGroundC
+cells <- dataColl5$SampleSubC
+## filter low background
+Bmin <- apply(dataB, 1, min)
+thres <- 10
+peak_sub <- which(Bmin>=thres)
+dataF <- dataF[peak_sub,]
+dataB <- dataB[peak_sub,]
+print(length(peak_sub))
+```
+
+```{r}
+sub <- sample(ncol(dataF), round(ncol(dataF)/4))
+dataF <- dataF[,sub]
+dataB <- dataB[,sub]
+cells <- cells[sub]
+
+## scale to make sure the fold change not too large/small
+fc <- dataF/dataB/ws[peak_sub]
+fc <- fc/median(fc[fc!=0])
+
+distM <- matrix(0, ncol(fc), ncol(fc))
+for (i in 1:(ncol(fc)-1)){
+  for (j in (i+1):ncol(fc)){
+    distM[i,j] <- 1 - caloverlap(fc[,i],fc[,j],top)
+  }
+}
+distM <- distM + t(distM)
+colnames(distM) <- cells
+rownames(distM) <- cells
+heatmap.2(distM, symm = TRUE, dendrogram="column", trace="none", main=paste("collapse", coll, ", top", top, "peaks, FC"))
+```
+
+Calculate fold-change, single cell, unreliable background
+
+```{r}
+dataF <- dataSub30$ForGroundSub
+dataB <- dataSub30$BackGroundSub
+cells <- dataSub30$SampleSub
+```
+
+```{r}
+sub <- sample(ncol(data), 50)
+dataF <- dataF[,sub]
+dataB <- dataB[,sub]
+cells <- cells[sub]
+## filter low background
+Bmin <- apply(dataB, 1, min)
+thres <- 5
+peak_sub <- which(Bmin>=thres)
+dataF <- dataF[peak_sub,]
+dataB <- dataB[peak_sub,]
+print(length(peak_sub))
+```
+
+```{r}
+colSums(dataF!=0)
+fc <- dataF/dataB/ws[peak_sub]
+fc <- fc/median(fc[fc!=0])
+distM <- matrix(0, ncol(fc), ncol(fc))
+for (i in 1:(ncol(fc)-1)){
+  for (j in (i+1):ncol(fc)){
+    distM[i,j] <- 1 - caloverlap(fc[,i],fc[,j],top)
+  }
+}
+top <- 1000
+distM <- distM + t(distM)
+colnames(distM) <- cells
+rownames(distM) <- cells
+heatmap.2(distM, symm = TRUE, dendrogram="column", trace="none", main=paste("single cell", ", top", top, "peaks, FC"))
+```
+
+## Use peak length for the adjustment
+
+Collapse 20 cells
+
+```{r}
+coll <- 20
+top <- 2000
+fn <- paste("/Users/zhixianglin/Documents/collaboration/mahdi/scATAC/CellLines6/dataColl",coll, ".rda", sep="")
+load(fn)
+dataF <- dataColl20$ForGroundC
+dataB <- dataColl20$BackGroundC
+cells <- dataColl20$SampleSubC
+## filter low background
+Bmin <- apply(dataB, 1, min)
+thres <- 100
+peak_sub <- which(Bmin>=thres)
+print(length(peak_sub))
+```
+
+Fold-change, more stringent background threshold
+
+```{r}
+dataF <- dataF[peak_sub,]
+dataB <- dataB[peak_sub,]
+## scale to make sure the fold change not too large/small
+fc <- dataF/dataB/ws[peak_sub]
+fc <- fc/median(fc[fc!=0])
+
+distM <- matrix(0, ncol(fc), ncol(fc))
+for (i in 1:(ncol(fc)-1)){
+  for (j in (i+1):ncol(fc)){
+    distM[i,j] <- 1 - caloverlap(fc[,i],fc[,j],top)
+  }
+}
+distM <- distM + t(distM)
+colnames(distM) <- cells
+rownames(distM) <- cells
+heatmap.2(distM, symm = TRUE, dendrogram="column", trace="none", main=paste("Thres100 collapse", coll, ", top", top, "peaks, FC"))
+```
+
+Peak length adjustment, more stringent background threshold
+
+```{r}
+## scale to make sure the fold change not too large/small
+fc <- dataF/ws[peak_sub]
+fc <- fc/median(fc[fc!=0])
+
+distM <- matrix(0, ncol(fc), ncol(fc))
+for (i in 1:(ncol(fc)-1)){
+  for (j in (i+1):ncol(fc)){
+    distM[i,j] <- 1 - caloverlap(fc[,i],fc[,j],top)
+  }
+}
+distM <- distM + t(distM)
+colnames(distM) <- cells
+rownames(distM) <- cells
+heatmap.2(distM, symm = TRUE, dendrogram="column", trace="none", main=paste("Thres100 collapse", coll, ", top", top, "peaks, window"))
+```
+
+## We need a good background estimate

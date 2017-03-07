@@ -1,0 +1,359 @@
+---
+title: "Explore scATAC-Seq, 6 cell lines"
+author: "Zhixiang Lin"
+date: "2/21/2017"
+output: html_notebook
+---
+
+Load the data
+
+```{r}
+library(readr)
+BackGround <- read_csv("C:/Users/Zhixiang/Data/CellLines6/BackGround.csv", col_names = FALSE)
+ForGround <- read_csv("C:/Users/Zhixiang/Data/CellLines6/ForeGround.csv", col_names = FALSE)
+spots <- read_delim("C:/Users/Zhixiang/Data/CellLines6/Hotspots-MergeAllSamples.bed", 
+    "\t", escape_double = FALSE, col_names = FALSE, trim_ws = TRUE)
+BackGround <- as.matrix(BackGround)
+ForGround <- as.matrix(ForGround)
+Sample <- read_delim("C:/Users/Zhixiang/Data/CellLines6/SampleOrder.txt", 
+    "\t", escape_double = FALSE, col_names = FALSE, 
+    trim_ws = TRUE)[,2][[1]]
+table(Sample)
+```
+
+```{r}
+hist(colSums(ForGround), breaks=200)
+```
+
+```{r}
+hist(colSums(BackGround), breaks=200)
+```
+
+```{r}
+plot(colSums(BackGround), colSums(ForGround), cex=0.6)
+```
+
+Pick some samples, plot the background along the chromosome 1.
+
+```{r}
+table(spots[1:13652,1][[1]])
+start_pos <- spots[1:13652,2][[1]]
+cs <- colSums(BackGround)
+cs[cs>10^7]
+```
+
+```{r}
+Sample[cs>10^7]
+```
+
+```{r}
+i <- 50
+plot(start_pos, BackGround[1:13652,i], cex=0.5, xlab="chr1 position", main=paste(i,Sample[i],cs[i]/10^6, sep=", "))
+```
+
+```{r}
+i <- 90
+plot(start_pos, BackGround[1:13652,i], cex=0.5, xlab="chr1 position", main=paste(i,Sample[i],cs[i]/10^6, sep=", "))
+```
+
+```{r}
+i <- 190
+plot(start_pos, BackGround[1:13652,i], cex=0.5, xlab="chr1 position", main=paste(i,Sample[i],cs[i]/10^6, sep=", "))
+```
+
+```{r}
+i <- 330
+plot(start_pos, BackGround[1:13652,i], cex=0.5, xlab="chr1 position", main=paste(i,Sample[i],cs[i]/10^6, sep=", "))
+```
+
+
+```{r}
+i <- 1632
+plot(start_pos, BackGround[1:13652,i], cex=0.5, xlab="chr1 position", main=paste(i,Sample[i],cs[i]/10^6, sep=", "))
+```
+
+
+```{r}
+i <- 1538
+plot(start_pos, BackGround[1:13652,i], cex=0.5, xlab="chr1 position", main=paste(i,Sample[i],cs[i]/10^6, sep=", "))
+```
+
+
+```{r}
+i <- 1444
+plot(start_pos, BackGround[1:13652,i], cex=0.5, xlab="chr1 position", main=paste(i,Sample[i],cs[i]/10^6, sep=", "))
+```
+
+```{r}
+i <- 1327
+plot(start_pos, BackGround[1:13652,i], cex=0.5, xlab="chr1 position", main=paste(i,Sample[i],cs[i]/10^6, sep=", "))
+```
+
+```{r}
+i <- 148
+plot(start_pos, BackGround[1:13652,i], cex=0.5, xlab="chr1 position", main=paste(i,Sample[i],cs[i]/10^6, sep=", "))
+```
+
+```{r}
+i <- 261
+plot(start_pos, BackGround[1:13652,i], cex=0.5, xlab="chr1 position", main=paste(i,Sample[i],cs[i]/10^6, sep=", "))
+```
+
+```{r}
+i <- 803
+plot(start_pos, BackGround[1:13652,i], cex=0.5, xlab="chr1 position", main=paste(i,Sample[i],cs[i]/10^6, sep=", "))
+```
+
+```{r}
+i <- 1098
+plot(start_pos, BackGround[1:13652,i], cex=0.5, xlab="chr1 position", main=paste(i,Sample[i],cs[i]/10^6, sep=", "))
+```
+
+```{r}
+i <- 1207
+plot(start_pos, BackGround[1:13652,i], cex=0.5, xlab="chr1 position", main=paste(i,Sample[i],cs[i]/10^6, sep=", "))
+```
+
+```{r}
+i <- 1264
+plot(start_pos, BackGround[1:13652,i], cex=0.5, xlab="chr1 position", main=paste(i,Sample[i],cs[i]/10^6, sep=", "))
+```
+
+```{r}
+i <- 1366
+plot(start_pos, BackGround[1:13652,i], cex=0.5, xlab="chr1 position", main=paste(i,Sample[i],cs[i]/10^6, sep=", "))
+```
+
+```{r}
+i <- 1582
+plot(start_pos, BackGround[1:13652,i], cex=0.5, xlab="chr1 position", main=paste(i,Sample[i],cs[i]/10^6, sep=", "))
+```
+
+```{r}
+cs[cs<10^6 & cs>9*10^5]
+```
+
+```{r}
+Sample[cs<10^6 & cs>9*10^5]
+```
+
+```{r}
+i <- 171
+plot(start_pos, BackGround[1:13652,i], cex=0.5, xlab="chr1 position", main=paste(i,Sample[i],cs[i]/10^6, sep=", "))
+```
+
+```{r}
+i <- 173
+plot(start_pos, BackGround[1:13652,i], cex=0.5, xlab="chr1 position", main=paste(i,Sample[i],cs[i]/10^6, sep=", "))
+```
+
+```{r}
+i <- 174
+plot(start_pos, BackGround[1:13652,i], cex=0.5, xlab="chr1 position", main=paste(i,Sample[i],cs[i]/10^6, sep=", "))
+```
+
+```{r}
+i <- 1635
+plot(start_pos, BackGround[1:13652,i], cex=0.5, xlab="chr1 position", main=paste(i,Sample[i],cs[i]/10^6, sep=", "))
+```
+
+```{r}
+i <- 1623
+plot(start_pos, BackGround[1:13652,i], cex=0.5, xlab="chr1 position", main=paste(i,Sample[i],cs[i]/10^6, sep=", "))
+```
+
+compare with bulk
+
+```{r}
+library(readr)
+K562_bulk <- read_delim("C:/Users/Zhixiang/Dropbox/tmp/bulk/K562_ENCSR000EKQ.fdr0.01.hot.bed", 
+    "\t", escape_double = FALSE, col_names = FALSE, trim_ws = TRUE)
+table(K562_bulk[,1][[1]])
+```
+
+```{r}
+table(K562_bulk[1:67826,1][[1]])
+```
+
+```{r}
+plot(K562_bulk[1:67826,2][[1]], log2(K562_bulk[1:67826,5][[1]]+1), cex=0.2, xlab="chr1 position", main="K562 bulk")
+```
+
+```{r}
+plot(K562_bulk[1:67826,2][[1]], K562_bulk[1:67826,5][[1]], cex=0.2, xlab="chr1 position", main="K562 bulk")
+```
+
+```{r}
+GM12878_bulk <- read_delim("C:/Users/Zhixiang/Dropbox/tmp/bulk/GM12878_ENCSR000EJD.fdr0.01.hot.bed", 
+    "\t", escape_double = FALSE, col_names = FALSE, trim_ws = TRUE)
+table(GM12878_bulk[,1][[1]])
+```
+
+```{r}
+plot(GM12878_bulk[1:41190,2][[1]], GM12878_bulk[1:41190,5][[1]], cex=0.2, xlab="chr1 position", main="GM12878 bulk")
+```
+
+Calculate the window size
+
+```{r}
+ws <- spots[,3][[1]] - spots[,2][[1]]
+hist(ws, breaks=200)
+```
+
+```{r}
+i <- 50
+plot(ws, ForGround[,i], cex=0.3)
+```
+
+```{r}
+i <- 50
+boxplot(log2(ForGround[which(ws>10^3),i]+1))
+```
+
+```{r}
+i <- 50
+boxplot(log2(ForGround[which(ws<10^3),i]+1))
+```
+
+```{r}
+i <- 50
+boxplot(ForGround[which(ws>10^3),i])
+```
+
+```{r}
+boxplot(log10(colSums(ForGround)+1)~Sample)
+```
+
+```{r}
+boxplot(log10(colSums(BackGround)+1)~Sample)
+```
+
+```{r}
+table(Sample[cs>10^6])
+```
+
+For each cell line, pick a subset of 30 cells
+
+```{r}
+set.seed(123)
+celllines <- names(table(Sample[cs>10^6]))
+ForGroundSub <- c()
+BackGroundSub <- c()
+SampleSub <- c()
+num <- 30
+for (cell in celllines){
+  seqtmp <- which(cs>10^6 & Sample==cell)
+  lab <- sample(seqtmp, num)
+  ForGroundSub <- cbind(ForGroundSub, ForGround[,lab])
+  BackGroundSub <- cbind(BackGroundSub, BackGround[,lab])
+  SampleSub <- c(SampleSub, rep(cell, num))
+}
+dataSub30 <- list(ForGroundSub=ForGroundSub, BackGroundSub=BackGroundSub, SampleSub=SampleSub, spots=spots)
+save(dataSub30, file="C:/Users/Zhixiang/Data/CellLines6/dataSub30.rda")
+```
+
+Miminum is 1000
+
+```{r}
+min(colSums(ForGroundSub!=0))
+```
+
+```{r}
+median(colSums(ForGroundSub!=0))
+```
+
+```{r}
+top <- 1000
+caloverlap <- function(x, y, top){
+  xtmp <- 0*x
+  ytmp <- 0*y
+  xtmp[order(x, decreasing=T)[1:top]] <- 1  
+  ytmp[order(y, decreasing=T)[1:top]] <- 1 
+  sum((xtmp+ytmp)==2)/top
+}
+
+```
+
+collapse cells
+
+```{r}
+set.seed(123)
+celllines <- names(table(Sample[cs>10^6]))
+ForGroundC <- c()
+BackGroundC <- c()
+SampleSubC <- c()
+coll <- 5
+for (cell in celllines){
+  seqtmp <- which(cs>10^6 & Sample==cell)
+  
+  groupnum <- floor(length(seqtmp)/coll)
+  labs <- sample(length(seqtmp))
+  for (i in 1:groupnum){
+    ForGroundC <- cbind(ForGroundC, rowSums(ForGround[,seqtmp[labs[((i-1)*coll+1):(i*coll)]]])) 
+    BackGroundC <- cbind(BackGroundC, rowSums(BackGround[,seqtmp[labs[((i-1)*coll+1):(i*coll)]]])) 
+  }
+  SampleSubC <- c(SampleSubC, rep(cell, groupnum))
+}
+dataColl5 <- list(ForGroundC=ForGroundC, BackGroundC=BackGroundC, SampleSubC=SampleSubC, spots=spots)
+save(dataColl5, file="C:/Users/Zhixiang/Data/CellLines6/dataColl5.rda")
+
+celllines <- names(table(Sample[cs>10^6]))
+ForGroundC <- c()
+BackGroundC <- c()
+SampleSubC <- c()
+coll <- 10
+for (cell in celllines){
+  seqtmp <- which(cs>10^6 & Sample==cell)
+  
+  groupnum <- floor(length(seqtmp)/coll)
+  labs <- sample(length(seqtmp))
+  for (i in 1:groupnum){
+    ForGroundC <- cbind(ForGroundC, rowSums(ForGround[,seqtmp[labs[((i-1)*coll+1):(i*coll)]]])) 
+    BackGroundC <- cbind(BackGroundC, rowSums(BackGround[,seqtmp[labs[((i-1)*coll+1):(i*coll)]]])) 
+  }
+  SampleSubC <- c(SampleSubC, rep(cell, groupnum))
+}
+dataColl10 <- list(ForGroundC=ForGroundC, BackGroundC=BackGroundC, SampleSubC=SampleSubC, spots=spots)
+save(dataColl10, file="C:/Users/Zhixiang/Data/CellLines6/dataColl10.rda")
+
+celllines <- names(table(Sample[cs>10^6]))
+ForGroundC <- c()
+BackGroundC <- c()
+SampleSubC <- c()
+coll <- 20
+for (cell in celllines){
+  seqtmp <- which(cs>10^6 & Sample==cell)
+  
+  groupnum <- floor(length(seqtmp)/coll)
+  labs <- sample(length(seqtmp))
+  for (i in 1:groupnum){
+    ForGroundC <- cbind(ForGroundC, rowSums(ForGround[,seqtmp[labs[((i-1)*coll+1):(i*coll)]]])) 
+    BackGroundC <- cbind(BackGroundC, rowSums(BackGround[,seqtmp[labs[((i-1)*coll+1):(i*coll)]]])) 
+  }
+  SampleSubC <- c(SampleSubC, rep(cell, groupnum))
+}
+dataColl20 <- list(ForGroundC=ForGroundC, BackGroundC=BackGroundC, SampleSubC=SampleSubC, spots=spots)
+save(dataColl20, file="C:/Users/Zhixiang/Data/CellLines6/dataColl20.rda")
+
+celllines <- names(table(Sample[cs>10^6]))
+ForGroundC <- c()
+BackGroundC <- c()
+SampleSubC <- c()
+coll <- 40
+for (cell in celllines){
+  seqtmp <- which(cs>10^6 & Sample==cell)
+  
+  groupnum <- floor(length(seqtmp)/coll)
+  labs <- sample(length(seqtmp))
+  for (i in 1:groupnum){
+    ForGroundC <- cbind(ForGroundC, rowSums(ForGround[,seqtmp[labs[((i-1)*coll+1):(i*coll)]]])) 
+    BackGroundC <- cbind(BackGroundC, rowSums(BackGround[,seqtmp[labs[((i-1)*coll+1):(i*coll)]]])) 
+  }
+  SampleSubC <- c(SampleSubC, rep(cell, groupnum))
+}
+dataColl40 <- list(ForGroundC=ForGroundC, BackGroundC=BackGroundC, SampleSubC=SampleSubC, spots=spots)
+save(dataColl40, file="C:/Users/Zhixiang/Data/CellLines6/dataColl40.rda")
+```
+
+
+

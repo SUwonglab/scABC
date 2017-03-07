@@ -1,0 +1,592 @@
+---
+title: "Explore_scATACSeq_6celllines-3"
+author: "Zhixiang Lin"
+date: "2/28/2017"
+output: pdf_document
+---
+
+This version implements the k-means algorithm
+
+## Explore data
+
+Load the data
+
+```{r}
+library(readr)
+library(gplots)
+library(Heatplus)
+library(vegan)
+library(RColorBrewer)
+library(rafalib)
+```
+
+```{r, eval=FALSE}
+data <- read_csv("~/Documents/collaboration/mahdi/scATAC/SelectedPeaks/ForeGround.csv",col_names = FALSE)
+data <- as.matrix(data)
+save(data, file="~/Documents/collaboration/mahdi/scATAC/SelectedPeaks/ForeGround.rda")
+set.seed(123)
+sub <- sample(nrow(data), 10000)
+data_sub <- data[sub,]
+save(data_sub, file="~/Documents/collaboration/mahdi/scATAC/SelectedPeaks/ForeGround_sub.rda")
+```
+
+```{r, eval=FALSE}
+load("~/Documents/collaboration/mahdi/scATAC/SelectedPeaks/ForeGround.rda")
+load("~/Documents/collaboration/mahdi/scATAC/SelectedPeaks/ForeGround_sub.rda")
+samples <- read_delim("~/Documents/collaboration/mahdi/scATAC/SelectedPeaks/SampleOrder.txt", 
+    "\t", escape_double = FALSE, col_names = FALSE, trim_ws = TRUE)
+samples <- samples[,2][[1]]
+table(samples)
+```
+
+```{r}
+load("C:/Users/Zhixiang/Data/CellLines6/updated/ForeGround.rda")
+load("C:/Users/Zhixiang/Data/CellLines6/updated/ForeGround_sub.rda")
+samples <- read_delim("C:/Users/Zhixiang/Data/CellLines6/updated/SampleOrder.txt", 
+    "\t", escape_double = FALSE, col_names = FALSE, trim_ws = TRUE)
+samples <- samples[,2][[1]]
+table(samples)
+```
+
+```{r}
+hist(colSums(data!=0), breaks=100)
+```
+
+## spearman correlation
+
+all samples
+
+```{r}
+distSsub <- 1-cor(data_sub, method="spearman")
+distS <- 1-cor(data, method="spearman")
+colnames(distS) <- samples
+rownames(distS) <- samples
+
+cells <- unique(samples)
+colcols <- rep(NA, length(samples))
+for (i in 1:length(cells)){
+  cell <- cells[i]
+  colcols[which(samples==cell)] <- brewer.pal(6, "Dark2")[i]
+}
+col.clus = hclust(as.dist(distS), method="complete")
+```
+
+```{r}
+scaleyellowred <- colorRampPalette(c("lightyellow", "red"), space = "rgb")(100)
+heatmap.2(distS, symm = TRUE, dendrogram="column", Colv = as.dendrogram(col.clus), col = scaleyellowred, ColSideColors = colcols, margins = c(10, 3),  trace = "none", density.info = "none", labRow = "", labCol = "")
+```
+
+Get the legends
+
+```{r}
+plot(1:6, 1:6, col=brewer.pal(6, "Dark2"), type="n")
+legend("topleft", legend = cells, col = brewer.pal(6, "Dark2"), lwd = 10,bty = "n")
+```
+
+subset of regions
+
+```{r}
+distSsub <- 1-cor(data_sub, method="spearman")
+colnames(distSsub) <- samples
+rownames(distSsub) <- samples
+
+cells <- unique(samples)
+colcols <- rep(NA, length(samples))
+for (i in 1:length(cells)){
+  cell <- cells[i]
+  colcols[which(samples==cell)] <- brewer.pal(6, "Dark2")[i]
+}
+col.clus = hclust(as.dist(distSsub), method="complete")
+```
+
+```{r}
+scaleyellowred <- colorRampPalette(c("lightyellow", "red"), space = "rgb")(100)
+heatmap.2(distSsub, symm = TRUE, dendrogram="column", Colv = as.dendrogram(col.clus), col = scaleyellowred, ColSideColors = colcols, margins = c(10, 3),  trace = "none", density.info = "none", labRow = "", labCol = "")
+```
+
+a permutation of the samples, subset of regions
+
+```{r}
+set.seed(123)
+perm <- sample(ncol(data_sub))
+distSsubPerm <- distSsub[perm, perm]
+colcolsPerm <- colcols[perm]
+col.clusPerm = hclust(as.dist(distSsubPerm), method="complete")
+scaleyellowred <- colorRampPalette(c("lightyellow", "red"), space = "rgb")(100)
+heatmap.2(distSsubPerm, symm = TRUE, dendrogram="column", Colv = as.dendrogram(col.clusPerm), col = scaleyellowred, ColSideColors = colcolsPerm, margins = c(10, 3),  trace = "none", density.info = "none", labRow = "", labCol = "")
+```
+
+
+a subset of samples, pick 60 cells per cell line
+
+```{r}
+set.seed(123)
+num <- 60
+subSseq <- c()
+for (i in 1:length(cells)){
+  cell <- cells[i]
+  subSseq <- c(subSseq, sample(which(samples==cell), num) )
+}
+
+datasubS <- data[,subSseq]
+samplessubS <- samples[subSseq]
+distSsubS <- distS[subSseq, subSseq]
+colcolssubS <- colcols[subSseq]
+col.clussubS = hclust(as.dist(distSsubS), method="complete")
+
+heatmap.2(distSsubS, symm = TRUE, dendrogram="column", Colv = as.dendrogram(col.clussubS), col = scaleyellowred, ColSideColors = colcolssubS, margins = c(10, 3),  trace = "none", density.info = "none", labRow = "", labCol = "")
+```
+
+add those problemetic samples
+
+```{r}
+set.seed(123)
+num <- 60
+pseq <- col.clus$order[c(136:149,932:946)]
+datatmp <- data[,-pseq]
+samplestmp <- samples[-pseq]
+datasubS <- data[,pseq]
+samplessubS <- samples[pseq]
+
+subSseq <- c()
+for (i in 1:length(cells)){
+  cell <- cells[i]
+  numtmp <- num - sum(samplessubS==cell)
+  subSseq <- c(subSseq, sample(which(samplestmp==cell), numtmp) )
+}
+datasubS <- cbind(datasubS, datatmp[,subSseq])
+samplessubS <- c(samplessubS, samplestmp[subSseq])
+
+distSsubS <- 1-cor(datasubS, method="spearman")
+
+colcolssubS <- rep(NA, length(samplessubS))
+for (i in 1:length(cells)){
+  cell <- cells[i]
+  colcolssubS[which(samplessubS==cell)] <- brewer.pal(6, "Dark2")[i]
+}
+
+col.clussubS = hclust(as.dist(distSsubS), method="complete")
+
+heatmap.2(distSsubS, symm = TRUE, dendrogram="column", Colv = as.dendrogram(col.clussubS), col = scaleyellowred, ColSideColors = colcolssubS, margins = c(10, 3),  trace = "none", density.info = "none", labRow = "", labCol = "")
+```
+
+## select top peak, overlap
+
+
+```{r}
+caloverlap <- function(x, y, top){
+  xtmp <- 0*x
+  ytmp <- 0*y
+  xtmp[order(x, decreasing=T)[1:top]] <- 1  
+  ytmp[order(y, decreasing=T)[1:top]] <- 1 
+  sum((xtmp+ytmp)==2)/top
+}
+
+getdataBin <- function(x, top){
+  xtmp <- 0*x
+  xtmp[order(x, decreasing=T)[1:top]] <- 1  
+  return(xtmp)
+}
+
+calBinDist <- function(column, data, top){
+  return(colSums(data*column)/top)
+}
+```
+
+```{r}
+top <- 1000
+dataBin <- apply(data, 2, getdataBin, top)
+distTop <- 1-crossprod(dataBin)/top
+col.clus = hclust(as.dist(distTop), method="complete")
+```
+
+```{r}
+scaleyellowred <- colorRampPalette(c("lightyellow", "red"), space = "rgb")(100)
+heatmap.2(distTop, symm = TRUE, dendrogram="column", Colv = as.dendrogram(col.clus), col = scaleyellowred, ColSideColors = colcols, margins = c(10, 3),  trace = "none", density.info = "none", labRow = "", labCol = "")
+```
+
+```{r}
+datasubSBin <- apply(datasubS, 2, getdataBin, top)
+distTop <- 1-crossprod(datasubSBin)/top
+col.clus = hclust(as.dist(distTop), method="complete")
+scaleyellowred <- colorRampPalette(c("lightyellow", "red"), space = "rgb")(100)
+heatmap.2(distTop, symm = TRUE, dendrogram="column", Colv = as.dendrogram(col.clus), col = scaleyellowred, ColSideColors = colcolssubS, margins = c(10, 3),  trace = "none", density.info = "none", labRow = "", labCol = "")
+```
+
+## k-means on the subset of data
+
+k-means on orginal data
+
+```{r}
+datasubS_pca <- prcomp(t(datasubS))$x[,1:30]
+nComp <- 5
+ncluster <- 6
+kmeansCluster <- kmeans(datasubS_pca[,1:nComp], centers=ncluster, nstart=5000)$cluster
+for (i in 1:ncluster){
+  print(paste("cluster", i))
+  print(table(samplessubS[which(kmeansCluster==i)]))
+}
+```
+
+k-means on orginal data, log2 scale
+
+```{r}
+datasubS_pca <- prcomp(t(log2(datasubS+1)))$x[,1:30]
+nComp <- 20
+ncluster <- 6
+kmeansCluster <- kmeans(datasubS_pca[,1:nComp], centers=ncluster, nstart=5000)$cluster
+for (i in 1:ncluster){
+  print(paste("cluster", i))
+  print(table(samplessubS[which(kmeansCluster==i)]))
+}
+```
+
+k-means on binarized data
+
+```{r}
+datasubS_pca <- prcomp(t(datasubSBin))$x[,1:30]
+nComp <- 5
+ncluster <- 6
+kmeansCluster <- kmeans(datasubS_pca[,1:nComp], centers=ncluster, nstart=5000)$cluster
+for (i in 1:ncluster){
+  print(paste("cluster", i))
+  print(table(samplessubS[which(kmeansCluster==i)]))
+}
+```
+
+```{r}
+nComp <- 30
+ncluster <- 6
+kmeansCluster <- kmeans(datasubS_pca[,1:nComp], centers=ncluster, nstart=5000)$cluster
+for (i in 1:ncluster){
+  print(paste("cluster", i))
+  print(table(samplessubS[which(kmeansCluster==i)]))
+}
+```
+
+## subset of regions for faster computation
+
+subset of regions
+
+```{r}
+distSsub <- 1-cor(data_sub, method="spearman")
+colnames(distSsub) <- samples
+rownames(distSsub) <- samples
+
+cells <- unique(samples)
+colcols <- rep(NA, length(samples))
+for (i in 1:length(cells)){
+  cell <- cells[i]
+  colcols[which(samples==cell)] <- brewer.pal(6, "Dark2")[i]
+}
+col.clus = hclust(as.dist(distSsub), method="complete")
+```
+
+```{r}
+scaleyellowred <- colorRampPalette(c("lightyellow", "red"), space = "rgb")(100)
+heatmap.2(distSsub, symm = TRUE, dendrogram="column", Colv = as.dendrogram(col.clus), col = scaleyellowred, ColSideColors = colcols, margins = c(10, 3),  trace = "none", density.info = "none", labRow = "", labCol = "")
+```
+
+```{r}
+distSsub <- 1-cor(data_sub, method="spearman")
+colnames(distSsub) <- samples
+rownames(distSsub) <- samples
+
+cells <- unique(samples)
+colcols <- rep(NA, length(samples))
+for (i in 1:length(cells)){
+  cell <- cells[i]
+  colcols[which(samples==cell)] <- brewer.pal(6, "Dark2")[i]
+}
+col.clus = hclust(as.dist(distSsub), method="average")
+```
+
+```{r}
+scaleyellowred <- colorRampPalette(c("lightyellow", "red"), space = "rgb")(100)
+heatmap.2(distSsub, symm = TRUE, dendrogram="column", Colv = as.dendrogram(col.clus), col = scaleyellowred, ColSideColors = colcols, margins = c(10, 3),  trace = "none", density.info = "none", labRow = "", labCol = "")
+```
+
+a permutation of the samples, subset of regions
+
+```{r}
+set.seed(123)
+perm <- sample(ncol(data_sub))
+distSsubPerm <- distSsub[perm, perm]
+colcolsPerm <- colcols[perm]
+col.clusPerm = hclust(as.dist(distSsubPerm), method="complete")
+scaleyellowred <- colorRampPalette(c("lightyellow", "red"), space = "rgb")(100)
+heatmap.2(distSsubPerm, symm = TRUE, dendrogram="column", Colv = as.dendrogram(col.clusPerm), col = scaleyellowred, ColSideColors = colcolsPerm, margins = c(10, 3),  trace = "none", density.info = "none", labRow = "", labCol = "")
+```
+
+a subset of the samples
+
+```{r}
+set.seed(123)
+num <- 50
+subSseq <- c()
+for (i in 1:length(cells)){
+  cell <- cells[i]
+  subSseq <- c(subSseq, sample(which(samples==cell), num) )
+}
+
+datasubS <- data[,subSseq]
+samplessubS <- samples[subSseq]
+distSsubS <- 1-cor(datasubS, method="spearman")
+
+cells <- unique(samplessubS)
+colcolssubS <- rep(NA, length(samplessubS))
+for (i in 1:length(cells)){
+  cell <- cells[i]
+  colcolssubS[which(samplessubS==cell)] <- brewer.pal(6, "Dark2")[i]
+}
+
+col.clussubS = hclust(as.dist(distSsubS), method="average")
+
+heatmap.2(distSsubS, symm = TRUE, dendrogram="column", Colv = as.dendrogram(col.clussubS), col = scaleyellowred, ColSideColors = colcolssubS, margins = c(10, 3),  trace = "none", density.info = "none", labRow = "", labCol = "")
+```
+
+cluster by the average option
+
+```{r}
+distS <- 1-cor(data, method="spearman")
+colnames(distS) <- samples
+rownames(distS) <- samples
+
+cells <- unique(samples)
+colcols <- rep(NA, length(samples))
+for (i in 1:length(cells)){
+  cell <- cells[i]
+  colcols[which(samples==cell)] <- brewer.pal(6, "Dark2")[i]
+}
+col.clus = hclust(as.dist(distS), method="average")
+```
+
+```{r}
+plot(col.clus)
+```
+
+```{r}
+scaleyellowred <- colorRampPalette(c("lightyellow", "red"), space = "rgb")(100)
+heatmap.2(distS, symm = TRUE, dendrogram="column", Colv = as.dendrogram(col.clus), col = scaleyellowred, ColSideColors = colcols, margins = c(10, 3),  trace = "none", density.info = "none", labRow = "", labCol = "")
+```
+
+## calculate the sum for each cell type
+
+```{r}
+cells <- unique(samples)
+signi <- c()
+for (cell in cells){
+  signi <- cbind(signi, rowSums(data[,which(samples==cell)])  )
+}
+```
+
+Assign cluster label
+
+```{r}
+datasigni <- cor(data, signi, method="spearman")
+cluster_lab <- apply(datasigni, 1, which.max)
+```
+
+```{r}
+for (i in 1:length(unique(cluster_lab))){
+  print(i)
+  print(table(samples[which(cluster_lab==i)]))  
+}
+```
+
+Perfect cluster!!
+
+## Use this strategy on the subset of samples
+
+```{r}
+cells1 <- unique(samplessubS)
+signi1 <- c()
+for (cell in cells1){
+  signi1 <- cbind(signi1, rowSums(datasubS[,which(samplessubS==cell)])  )
+}
+```
+
+Assign cluster label
+
+```{r}
+datasigni1 <- cor(datasubS, signi1, method="spearman")
+cluster_lab1 <- apply(datasigni1, 1, which.max)
+```
+
+Assign cluster label, full dataset
+
+```{r}
+datasigni2 <- cor(data, signi1, method="spearman")
+cluster_lab2 <- apply(datasigni2, 1, which.max)
+for (i in 1:length(unique(cluster_lab2))){
+  print(i)
+  print(table(samples[which(cluster_lab2==i)]))  
+}
+```
+
+```{r}
+for (i in 1:length(unique(cluster_lab1))){
+  print(i)
+  print(table(samplessubS[which(cluster_lab1==i)]))  
+}
+```
+
+## modified k-means
+
+Does not seem to work
+
+```{r}
+kmeansSpearman <- function(data, samples, ncenters, inicenter, maxiter){
+  clustercenter <- inicenter
+  for (iter in 1:maxiter){
+    scor <- cor(data, clustercenter, method="spearman")
+    # assign cluster
+    cluster <- apply(scor, 1, which.max) 
+    print(iter)
+    print(table(cluster))
+    # recalculate clustercenter
+    clustercenter <- c()
+    for (i in 1:ncenters){
+      tmp <- which(cluster==i)
+      if (length(tmp)==1){
+        clustercenter <- cbind(clustercenter, data[,tmp]  )  
+      } else {
+        clustercenter <- cbind(clustercenter, rowSums(data[,tmp])  ) 
+      }
+    }
+  }
+  return(cluster)
+}
+```
+
+Good start
+
+```{r}
+kmeansSpearman(data=datasubS, samples=samplessubS, ncenters=6, inicenter=signi1, maxiter=50)
+```
+
+```{r}
+kmeansSpearman(data=data, samples=samples, ncenters=6, inicenter=signi1, maxiter=50)
+```
+
+debug, nope, does not work
+
+```{r}
+clustercenter <- signi1
+scor <- cor(data, clustercenter, method="spearman")
+cluster <- apply(scor, 1, which.max) 
+clustercenter.new <- c()
+for (i in 1:6){
+      tmp <- which(cluster==i)
+      clustercenter.new <- cbind(clustercenter.new, rowSums(data[,tmp])  ) 
+}
+scor.new <- cor(data, clustercenter.new, method="spearman")
+cluster.new <- apply(scor.new, 1, which.max) 
+```
+
+Random start. This get stucks
+
+```{r}
+set.seed(12)
+signi1Random <- datasubS[,sample(ncol(datasubS), 6)]
+kmeansSpearman(data=datasubS, samples=samplessubS, ncenters=6, inicenter=signi1Random, maxiter=50)
+```
+
+Another random start
+
+```{r}
+set.seed(12)
+cells1 <- unique(samplessubS)
+randomcluster <- sample(samplessubS)
+signiR <- c()
+for (cell in cells1){
+  signiR <- cbind(signiR, rowSums(datasubS[,which(randomcluster==cell)])  )
+}
+
+kmeansSpearman(data=datasubS, samples=samplessubS, ncenters=6, inicenter=signiR, maxiter=50)
+```
+
+## try PAM
+
+Spearman 
+
+```{r}
+library(cluster)
+distS <- 1-cor(data, method="spearman")
+resultpamS <- pam(x=distS, k=6, diss = TRUE)
+clusterS <- resultpamS$clustering
+```
+
+kendall, this is slow!
+
+```{r, eval=FALSE}
+distK <- 1-cor(data, method="kendall")
+resultpamK <- pam(x=distK, k=6, diss = TRUE)
+clusterK <- resultpam$clustering
+```
+
+
+Agglomerative step afterwards
+
+```{r}
+ncenters <- length(unique(clusterS))
+clustercenter <- c()
+  for (i in 1:ncenters){
+    tmp <- which(clusterS==i)
+    if (length(tmp)==1){
+        clustercenter <- cbind(clustercenter, data[,tmp]  )  
+    } else {
+        clustercenter <- cbind(clustercenter, rowSums(data[,tmp])  ) 
+    }
+}
+scor <- cor(data, clustercenter, method="spearman")
+clusterSA <- apply(scor, 1, which.max) 
+```
+
+check clusters
+
+```{r}
+for (i in 1:length(unique(clusterS))){
+  print(i)
+  print(table(samples[which(clusterS==i)]))  
+}
+```
+
+```{r}
+for (i in 1:length(unique(clusterSA))){
+  print(i)
+  print(table(samples[which(clusterSA==i)]))  
+}
+```
+
+```{r}
+cells <- unique(samples)
+num <- 10
+subSseq <- c()
+for (i in 1:length(cells)){
+  cell <- cells[i]
+  subSseq <- c(subSseq, sample(which(samples==cell), num) )
+}
+
+datasubS <- data[,subSseq]
+samplessubS <- samples[subSseq]
+distSsubS <- 1-cor(datasubS, method="spearman")
+
+resultpamSsubS <- pam(x=distSsubS, k=6, diss = TRUE)
+clusterSsubS <- resultpamSsubS$clustering
+
+ncenters <- length(unique(clusterSsubS))
+clustercenter <- c()
+  for (i in 1:ncenters){
+    tmp <- which(clusterSsubS==i)
+    if (length(tmp)==1){
+        clustercenter <- cbind(clustercenter, datasubS[,tmp]  )  
+    } else {
+        clustercenter <- cbind(clustercenter, rowSums(datasubS[,tmp])  ) 
+    }
+}
+scorsubS <- cor(datasubS, clustercenter, method="spearman")
+clusterSsubSA <- apply(scorsubS, 1, which.max) 
+print(table(clusterSsubS))
+print(table(clusterSsubSA))
+```

@@ -1,0 +1,8 @@
+---
+title: "Check batch effect"
+author: "Zhixiang Lin"
+date: "3/6/2017"
+output: pdf_document
+---
+
+How bad is the batch effect? Think about GC content, etc. Need the bactch information from Mahdi.

@@ -1,0 +1,8 @@
+---
+title: "Explore sub clusters"
+author: "Zhixiang Lin"
+date: "3/6/2017"
+output: pdf_document
+---
+
+Do clustering on K562 and the GM12878 cell line alone. Can we find subpopulations within each cell type, and connect the top peaks to scRNA-Seq data
