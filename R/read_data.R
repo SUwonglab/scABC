@@ -1,4 +1,10 @@
-
+#' select peaks
+#' @param filename of a bed12+3 gapped peaks file obtain from peaking calling using MACS2
+#' @return significant peaks obtained by filtering by p-value
+#' @keywords peaks
+#' @export
+#' @examples
+#' select_peaks()
 select_peaks <- function(filename){
   column_names = c("chrom", "chromStart", "chromEnd", "name", "score", "strand",
                    "thickStart", "thickEnd", "itemRgb", "blockCount", "blockSizes",
