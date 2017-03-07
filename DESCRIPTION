@@ -1,0 +1,15 @@
+Package: ZLDa
+Type: Package
+Title: unsupervised clustering of scATAC-seq data
+Version: 0.1.0
+Author: as.person(c(“Mahdi Zamanighomi <mzamani@stanford.edu> [cre]”,
+                    “Zhixiang Lin <zl235@stanford.edu> [aut, cre]”,
+                    “Timothy Daley <tdaley@stanford.edu> [aut, cre]”))
+Maintainer: Timothy Daley <tdaley@stanford.edu> and Zhixiang Lin <zl235@stanford.edu>
+Description: A package for unsupervised clustering of single cell ATAC-seq
+    data to identify cells with common epigenetic patterns at the single cell level.
+Depends: R(>= 3.3.2)
+Imports: #nothing yet 
+License: GPL-3
+Encoding: UTF-8
+LazyData: true
