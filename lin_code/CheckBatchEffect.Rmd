@@ -5,4 +5,224 @@ date: "3/6/2017"
 output: pdf_document
 ---
 
-How bad is the batch effect? Think about GC content, etc. Need the bactch information from Mahdi.
+How bad is the batch effect? Think about GC content, etc. Need the batch information from Mahdi.
+
+```{r}
+library(readr)
+library(WeightedCluster)
+```
+
+## load data, K562
+
+data matrix
+
+```{r}
+ForeGround <- read_csv("/Users/zhixianglin/Documents/collaboration/mahdi/scATAC/K562/416Cells/ForeGround.csv", col_names = FALSE)
+ForeGround <- as.matrix(ForeGround)
+
+BackGround <- read_csv("/Users/zhixianglin/Documents/collaboration/mahdi/scATAC/K562/416Cells/BackGround.csv", col_names = FALSE)
+BackGround <- as.matrix(BackGround)
+```
+
+batch information
+
+```{r}
+batch <- read_delim("/Users/zhixianglin/Documents/collaboration/mahdi/scATAC/K562/416Cells/SampleOrderBrief.txt", "\t", escape_double = FALSE, col_names = FALSE, trim_ws = TRUE)
+batch <- batch[,2][[1]]
+print(table(batch))
+```
+
+## run weighted K-medoid
+
+Calculate 1 - Spearman 
+
+```{r}
+distS <- 1-cor(ForeGround, method="spearman")
+```
+
+Calculate the median of BackGround for each sample
+
+```{r}
+BackGroundMedian <- apply(BackGround, 2, median)
+```
+
+Boxplot of BackGroundMedian stratified by batch
+
+```{r}
+boxplot(BackGroundMedian~batch)
+```
+
+```{r}
+nCluster <- 6
+lambda <- 1
+a <- quantile(BackGroundMedian, 0.5)
+W <- 1/(1+exp(-lambda*(BackGroundMedian-a)))
+resultW <- wcKMedoids(distS, k=nCluster, weights=W)
+clusterW <- resultW$clustering
+clusterW <- as.numeric(factor(clusterW))
+```
+
+## get landmark 
+
+$landmark$ is $num of peaks \times num of lanmarks$
+
+```{r}
+landmarks <- c()
+  for (i in 1:nCluster){
+    tmp <- which(clusterW==i)
+    if (length(tmp)==1){
+        landmarks <- cbind(landmarks, ForeGround[,tmp]  )  
+    } else {
+        landmarks <- cbind(landmarks, rowSums(ForeGround[,tmp])  ) 
+    }
+  }
+```
+
+
+```{r}
+selectTop <- function(x, top){
+  thres <- sort(x, decreasing=T)[top]
+  x[x<thres] <- 0
+  return(x)
+}
+```
+
+pick the top peaks in the landmarks
+
+```{r}
+top <- 2000
+landmarksTop <- apply(landmarks, 2, selectTop, top)
+```
+
+## run KNN  
+
+```{r}
+scor <- cor(ForeGround, landmarksTop, method="spearman")
+clusterWKNN <- apply(scor, 1, which.max) 
+```
+
+
+## check the clustering result.
+
+```{r}
+cells <- unique(batch)
+```
+
+```{r}
+getClusterCount <- function(cluster, samples, cells){
+  ### input
+  #cluster: clustering result for each sample
+  #samples: vector with the cell types for each sample
+  #cells: order of the cell types
+  clusterCount <- matrix(0, nrow=length(unique(cluster)), ncol=length(cells))
+  for (i in 1:length(unique(cluster))){
+    tmp <- samples[which(cluster==i)]
+    for (j in 1:length(cells)){
+      cell <- cells[j]
+      clusterCount[i, j] <- sum(tmp==cell)
+    }
+  }
+  tmp <- apply(clusterCount, 2, which.max)
+  if (max(table(tmp))>1){
+    seqs <- c()
+    for (i in 1:nrow(clusterCount)){
+      if (i==1){
+        seqs <- c(seqs, which.max(clusterCount[,i])[1])
+      } 
+      if (i>1 & i<nrow(clusterCount)){
+        seqs <- c(seqs, c(c(1:nrow(clusterCount))[-seqs])[which.max(clusterCount[-seqs,i])[1]])  
+      }
+      if (i==nrow(clusterCount)){
+        seqs <- c(seqs, c(1:nrow(clusterCount))[-seqs]) 
+      }
+    }
+  } else {
+    seqs <- tmp
+  }
+  clusterCount <- clusterCount[seqs,]
+  row.names(clusterCount) <- paste("cluster", 1:length(unique(cluster)))
+  colnames(clusterCount) <- cells
+  return(clusterCount)
+}
+
+getCorrectCount <- function(clusterCount){
+  ### input
+  #c lusterCount: output from getClusterCount
+  ### output, we assign the cell type of each cluster by the majority
+  # c(the number of correctly clusterd cells, the percentage of correctly clustered cells)
+  return(c( sum(apply(clusterCount, 1, max)),  sum(apply(clusterCount, 1, max))/sum(clusterCount)) )
+}
+```
+
+weighted K-medoids
+
+```{r}
+ClusterCountW <- getClusterCount(cluster=clusterW, samples=batch, cells=cells)
+#CorrectCountW <- getCorrectCount(ClusterCountW)
+print(ClusterCountW)
+#print(CorrectCountW)
+```
+
+weighted K-medoids + KNN
+
+```{r}
+ClusterCountWKNN <- getClusterCount(cluster=clusterWKNN, samples=batch, cells=cells)
+#CorrectCountWKNN <- getCorrectCount(ClusterCountWKNN)
+print(ClusterCountWKNN)
+```
+
+## change number of clusters to 2
+
+```{r}
+nCluster <- 2
+lambda <- 1
+a <- quantile(BackGroundMedian, 0.5)
+W <- 1/(1+exp(-lambda*(BackGroundMedian-a)))
+resultW <- wcKMedoids(distS, k=nCluster, weights=W)
+clusterW <- resultW$clustering
+clusterW <- as.numeric(factor(clusterW))
+landmarks <- c()
+for (i in 1:nCluster){
+    tmp <- which(clusterW==i)
+    if (length(tmp)==1){
+        landmarks <- cbind(landmarks, ForeGround[,tmp]  )  
+    } else {
+        landmarks <- cbind(landmarks, rowSums(ForeGround[,tmp])  ) 
+    }
+}
+top <- 2000
+landmarksTop <- apply(landmarks, 2, selectTop, top)
+scor <- cor(ForeGround, landmarksTop, method="spearman")
+clusterWKNN <- apply(scor, 1, which.max) 
+ClusterCountW <- getClusterCount(cluster=clusterW, samples=batch, cells=cells)
+print(ClusterCountW)
+ClusterCountWKNN <- getClusterCount(cluster=clusterWKNN, samples=batch, cells=cells)
+print(ClusterCountWKNN)
+```
+
+```{r}
+nCluster <- 3
+lambda <- 1
+a <- quantile(BackGroundMedian, 0.5)
+W <- 1/(1+exp(-lambda*(BackGroundMedian-a)))
+resultW <- wcKMedoids(distS, k=nCluster, weights=W)
+clusterW <- resultW$clustering
+clusterW <- as.numeric(factor(clusterW))
+landmarks <- c()
+for (i in 1:nCluster){
+    tmp <- which(clusterW==i)
+    if (length(tmp)==1){
+        landmarks <- cbind(landmarks, ForeGround[,tmp]  )  
+    } else {
+        landmarks <- cbind(landmarks, rowSums(ForeGround[,tmp])  ) 
+    }
+}
+top <- 2000
+landmarksTop <- apply(landmarks, 2, selectTop, top)
+scor <- cor(ForeGround, landmarksTop, method="spearman")
+clusterWKNN <- apply(scor, 1, which.max) 
+ClusterCountW <- getClusterCount(cluster=clusterW, samples=batch, cells=cells)
+print(ClusterCountW)
+ClusterCountWKNN <- getClusterCount(cluster=clusterWKNN, samples=batch, cells=cells)
+print(ClusterCountWKNN)
+```
