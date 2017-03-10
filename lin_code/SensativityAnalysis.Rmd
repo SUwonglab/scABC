@@ -1,0 +1,8 @@
+---
+title: "Sensitivity Analysis"
+author: "Zhixiang Lin"
+date: "3/6/2017"
+output: pdf_document
+---
+
+Sensitivity Analysis: decrease the number of cells for the population and see how it may affect the clustering/landmark results.

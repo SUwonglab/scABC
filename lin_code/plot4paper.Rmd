@@ -1,0 +1,317 @@
+---
+title: "plot4paper"
+author: "Zhixiang Lin"
+date: "3/6/2017"
+output: pdf_document
+---
+
+this script generate figures for publication
+
+```{r}
+library(readr)
+library(gplots)
+library(Heatplus)
+library(vegan)
+library(RColorBrewer)
+library(rafalib)
+library(ggdendro)
+library(ggplot2)
+library(gridExtra)
+library(cluster)
+library(WeightedCluster)
+```
+
+## the sigmoid function plot
+
+the sigmoid function. $\frac{1}{1+\exp^{-\lambda(x-a)}}$ 
+
+```{r}
+col <- brewer.pal(6, "Set1")[2]
+lambda <- 1
+a <- 8
+x <- seq(0, 15, 0.1)
+plot(x, 1/(1+exp(-lambda*(x-a))), type="l", ylab="Weight", xlab="Sequencing depth", lwd=2.5, col=col, xaxt="n")
+```
+
+```{r, eval=FALSE}
+pdf("~/Dropbox/CEGS/figures_Zhixiang/sigmoid_new.pdf", width=5, height=5)
+plot(x, 1/(1+exp(-lambda*(x-a))), type="l", ylab="Weight", xlab="Sequencing depth", lwd=2.5, col=col, xaxt="n")
+dev.off()
+```
+
+## heatmap for a subset of cells and top peaks(from landmark) for demonstration in figure 1
+
+Load the data matrix, 946 cells
+
+desktop 
+
+```{r}
+data <- read_csv("C:/Users/Zhixiang/Data/CellLines6/Landmark-Index/946Cells/ForeGround.csv", col_names = FALSE)
+data <- as.matrix(data)
+background <- read_csv("C:/Users/Zhixiang/Data/CellLines6/Landmark-Index/946Cells/BackGround.csv", col_names = FALSE)
+background <- as.matrix(background)
+samples <- read_delim("C:/Users/Zhixiang/Data/CellLines6/Landmark-Index/946Cells/SampleOrder.txt", "\t", escape_double = FALSE, col_names = FALSE, trim_ws = TRUE)
+samples <- samples[,2][[1]]
+```
+
+Load sequence for the landmark 
+
+```{r}
+Landmarks <- read_csv("C:/Users/Zhixiang/Data/CellLines6/Landmark-Index/946Cells/Landmarks.csv")
+```
+
+The cells and rearrange the landmark by cells
+
+```{r}
+cells <- c("K562", "GM12878", "HL-60", "BJ", "TF-1", "H1")
+tmp <- colnames(Landmarks)
+seq <- c()
+for (cell in cells){
+  seq <- c(seq, which(tmp==cell))
+}
+Landmarks <- Landmarks[,seq]
+Landmarks <- as.matrix(Landmarks)
+```
+
+Check whether the top peaks are ordered by read count. Yes they are
+
+```{r}
+order(rowSums(data[,which(samples==cells[1])]), decreasing=T)[1:10]
+order(rowSums(data[,which(samples==cells[3])]), decreasing=T)[1:10]
+```
+
+Pick the peaks unique to each cell type
+
+```{r}
+unique_peak_seq <- list()
+for (i in 1:length(cells)){
+  #if (i==1){
+    ## for K562
+  #}
+  ltmp <- Landmarks[,i]
+  lother <- as.vector(Landmarks[,-i])
+  unique_peak_seq[[i]] <- ltmp[which(sapply(ltmp, function(x, lother){sum(lother==x)}, lother)==0)]
+}
+for (i in unique_peak_seq){
+  print(length(i))
+}
+```
+
+Pick the top 30 peaks unique to each cell type
+
+```{r}
+top_num <- 30
+top_peak_seq <- c()
+for (i in 1:length(cells)){
+  top_peak_seq <- c(top_peak_seq, (unique_peak_seq[[i]])[1:top_num]) 
+}
+```
+
+Randomly pick 30 cells per cell type, top 30 unique peaks. datasub is peak by sample
+
+```{r}
+set.seed(123)
+```
+
+```{r}
+num_cell <- 30
+dataSub <- c()
+for (cell in cells){
+  dataSub <- cbind(dataSub, data[top_peak_seq, sample(which(samples==cell), num_cell)])
+}
+dataSubThres <- dataSub
+cutoff <- 
+dataSubThres[which(dataSubThres>=6)] <- 6
+```
+
+plot the heatmap
+
+```{r}
+cols <- rep(brewer.pal(6, "Dark2"), each=num_cell)
+scaleyellowblack <- colorRampPalette(c("lightyellow", "black"), space = "rgb")(100)
+heatmap.2(dataSubThres, dendrogram="none", col = scaleyellowblack, na.color="yellow",
+          labRow = "", labCol = "",
+          ## row and column order
+          Rowv=FALSE, Colv = FALSE,  
+          ## row and column side color
+          #ColSideColors = colcolssubS
+          RowSideColors = cols, 
+          margins = c(10, 3),  trace = "none",   
+          ## color key
+          key=F, key.xlab="1 - Spearman", key.title="", keysize=1.2, 
+          density.info = "none")
+```
+
+Pick the samples with deepest depth
+
+```{r}
+## median of background
+backgroundMedian <- apply(background, 2, median)
+num_cell <- 30
+dataSub1 <- c()
+for (cell in cells){
+  seqtmp <- order(backgroundMedian[which(samples==cell)], decreasing=T)[1:num_cell]
+  dataSub1 <- cbind(dataSub1, data[top_peak_seq, (which(samples==cell))[seqtmp]])
+}
+dataSubThres1 <- dataSub1
+dataSubThres1[which(dataSubThres1>=6)] <- 6
+```
+
+plot the heatmap
+
+```{r}
+heatmap.2(dataSubThres1, dendrogram="none", col = scaleyellowblack, na.color="yellow",
+          labRow = "", labCol = "",
+          ## row and column order
+          Rowv=FALSE, Colv = FALSE,  
+          ## row and column side color
+          #ColSideColors = colcolssubS
+          RowSideColors = cols, 
+          margins = c(10, 3),  trace = "none",   
+          ## color key
+          key=F, key.xlab="1 - Spearman", key.title="", keysize=1.2, 
+          density.info = "none")
+```
+
+
+save the two plots
+
+```{r, eval=FALSE}
+pdf("C:/Users/Zhixiang/Dropbox/CEGS/figures_Zhixiang/small_heatmap_randomSample.pdf", width=5, height=5)
+heatmap.2(dataSubThres, dendrogram="none", col = scaleyellowblack, na.color="yellow",
+          labRow = "", labCol = "",
+          ## row and column order
+          Rowv=FALSE, Colv = FALSE,  
+          ## row and column side color
+          #ColSideColors = colcolssubS
+          RowSideColors = cols, 
+          margins = c(10, 3),  trace = "none",   
+          ## color key
+          key=F, key.xlab="1 - Spearman", key.title="", keysize=1.2, 
+          density.info = "none")
+dev.off()
+```
+
+```{r, eval=F}
+pdf("C:/Users/Zhixiang/Dropbox/CEGS/figures_Zhixiang/small_heatmap_deepSample.pdf", width=5, height=5)
+heatmap.2(dataSubThres1, dendrogram="none", col = scaleyellowblack, na.color="yellow",
+          labRow = "", labCol = "",
+          ## row and column order
+          Rowv=FALSE, Colv = FALSE,  
+          ## row and column side color
+          #ColSideColors = colcolssubS
+          RowSideColors = cols, 
+          margins = c(10, 3),  trace = "none",   
+          ## color key
+          key=F, key.xlab="1 - Spearman", key.title="", keysize=1.2, 
+          density.info = "none")
+dev.off()
+```
+
+## landmap and all top peaks
+
+```{r}
+library(readr)
+data <- read_csv("C:/Users/Zhixiang/Dropbox/tmp/Landmark/Landmark_reorder.csv", col_names = FALSE)
+data <- as.matrix(data)
+sampleinfor <- read_delim("C:/Users/Zhixiang/Dropbox/tmp/Landmark/KnnWithIntial.txt", "\t", escape_double = FALSE, col_names = FALSE, trim_ws = TRUE)
+clusters <- sampleinfor[,2][[1]]
+samples <- sampleinfor[,3][[1]]
+```
+
+```{r}
+cells <- c("K562", "GM12878", "HL-60", "BJ", "TF-1", "H1")
+cols <- rep(NA, length(samples))
+for (i in 1:length(cells)){
+  cell <- cells[i]
+  cols[which(samples==cell)] <- brewer.pal(6, "Dark2")[i]
+}
+scaleyellowred <- colorRampPalette(c("lightyellow", "red"), space = "rgb")(100)
+
+dataThres <- data
+dataThres[which(dataThres>=6)] <- 6
+```
+
+```{r}
+pdf("test.pdf", width=4.5/2.54, height=3.8/2.54)
+#par(mar=rep(1,4))
+heatmap.2(dataThres[,sort(sample(5058,200))], dendrogram="none", col = scaleyellowred, na.color="yellow",
+          labRow = "", labCol = "",
+          ## row and column order
+          Rowv=FALSE, Colv = FALSE,  
+          ## row and column side color
+          #ColSideColors = colcolssubS
+          #RowSideColors = cols, 
+          margins = c(10, 3),  trace = "none",   
+          ## color key
+          key=F, key.xlab="1 - Spearman", key.title="", keysize=1.2, 
+          density.info = "none")
+dev.off()
+```
+
+
+```{r}
+heatmap.2(dataThres, dendrogram="none", col = scaleyellowred, na.color="yellow",
+          labRow = "", labCol = "",
+          ## row and column order
+          Rowv=FALSE, Colv = FALSE,  
+          ## row and column side color
+          #ColSideColors = colcolssubS
+          RowSideColors = cols, 
+          margins = c(10, 3),  trace = "none",   
+          ## color key
+          key=F, key.xlab="1 - Spearman", key.title="", keysize=1.2, 
+          density.info = "none")
+```
+
+```{r}
+col1 = hclust(as.dist(cor(dataThres[,tt], method="spearman")), method="average")
+heatmap.2(dataThres[,tt], dendrogram="column", col = scaleyellowred, na.color="yellow",
+          labRow = "", labCol = "",
+          ## row and column order
+          Rowv=FALSE, Colv = col1,  
+          ## row and column side color
+          #ColSideColors = colcolssubS
+          RowSideColors = cols, 
+          margins = c(10, 3),  trace = "none",   
+          ## color key
+          key=F, key.xlab="1 - Spearman", key.title="", keysize=1.2, 
+          density.info = "none")
+```
+
+save figure
+
+```{r, eval=FALSE}
+pdf("/Users/Zhixiang/Dropbox/CEGS/figures_Zhixiang/heatmap_toppeaks.pdf", width=10, height=10)
+heatmap.2(dataThres, dendrogram="none", col = scaleyellowred, na.color="yellow",
+          labRow = "", labCol = "",
+          ## row and column order
+          Rowv=FALSE, Colv = FALSE,  
+          ## row and column side color
+          #ColSideColors = colcolssubS
+          RowSideColors = cols, 
+          margins = c(10, 3),  trace = "none",   
+          ## color key
+          key=F, key.xlab="1 - Spearman", key.title="", keysize=1.2, 
+          density.info = "none")
+dev.off()
+```
+
+save figure, black
+
+```{r, eval=FALSE}
+scaleyellowblack <- colorRampPalette(c("lightyellow", "black"), space = "rgb")(100)
+pdf("/Users/Zhixiang/Dropbox/CEGS/figures_Zhixiang/heatmap_toppeaksBlack.pdf", width=10, height=10)
+heatmap.2(dataThres, dendrogram="none", col = scaleyellowblack, na.color="yellow",
+          labRow = "", labCol = "",
+          ## row and column order
+          Rowv=FALSE, Colv = FALSE,  
+          ## row and column side color
+          #ColSideColors = colcolssubS
+          RowSideColors = cols, 
+          margins = c(10, 3),  trace = "none",   
+          ## color key
+          key=F, key.xlab="1 - Spearman", key.title="", keysize=1.2, 
+          density.info = "none")
+dev.off()
+```
