@@ -3,7 +3,6 @@
 #' @return significant peaks obtained by filtering by p-value
 #' @keywords peaks
 #' @export
-#' @examples
 #' select_peaks()
 select_peaks <- function(filename){
   column_names = c("chrom", "chromStart", "chromEnd", "name", "score", "strand",
@@ -14,3 +13,4 @@ select_peaks <- function(filename){
   wanted_peaks = which(gapped_peaks$pValue > 1); # pValue is -log10(p), p < 0.1 => pValue > 1
   return(gapped_peaks[wanted_peaks, ])
 }
+
