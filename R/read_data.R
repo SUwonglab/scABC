@@ -6,7 +6,7 @@ sort_peaks <- function(peaks){
 #' @param filename of a bed12+3 gapped peaks file obtain from peaking calling using MACS2
 #' @return significant peaks obtained by filtering by p-value
 #' @keywords peaks
-#' @export
+#' @export select_peaks
 select_peaks <- function(filename, thresh = 1){
   column_names = c("chrom", "start", "end", "name", "score", "strand",
                    "thickStart", "thickEnd", "itemRgb", "blockCount", "blockSizes",
@@ -37,7 +37,7 @@ get_counts_from_bam <- function(bamfile, peaks){
 #' @import GenomicRanges
 #' @keywords peaks
 #' @keywords counts
-#' @export
+#' @export get_counts_matrix
 get_counts_matrix <- function(bamfiles, peaks){
   peaks = peaks2GRanges(peaks)
   counts_list = lapply(bamfiles, function(x) get_counts_from_bam(x, peaks))

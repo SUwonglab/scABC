@@ -12,7 +12,7 @@ select_top <-function(x, n_top){
 #' @param lambda weighting parameter (default = 1)
 #' @param nTop number of top clusters
 #' @import WeightedCluster 
-#' @export
+#' @export compute_landmarks
 compute_landmarks <- function(ForeGround, BackGround, nCluster = 2, lambda = 1, nTop = 2000){
   # check types
   stopifnot(is.matrix(ForeGround) || is.data.frame(ForeGround))
@@ -53,7 +53,7 @@ compute_landmarks <- function(ForeGround, BackGround, nCluster = 2, lambda = 1, 
 #' @name assign2landmarks
 #' @param ForeGround matrix or data frame of Foreground values
 #' @param topLandmarks output from compute_landmarks
-#' @export
+#' @export assign2landmarks
 assign2landmarks <- function(ForeGround, topLandmarks){
  scor = cor(ForeGround, topLandmarks, method = "spearman")
  return(apply(scor, 1, which.max))
