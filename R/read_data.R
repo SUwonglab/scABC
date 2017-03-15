@@ -34,6 +34,8 @@ get_counts_from_bam <- function(bamfile, peaks){
 #' @param bamfiles a vector of filenames of input bam files
 #' @param peaks a bed15 format file returned from select_peaks
 #' @return a matrix of chrom, start, end of peaks followed by counts of each bam file in bamfiles
+#' @import Rsamtools 
+#' @import GenomicRanges
 #' @keywords peaks
 #' @keywords counts
 #' @export
