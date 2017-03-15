@@ -24,9 +24,27 @@ peaks2GRanges <- function(peaks){
 }
 
 # peaks should be in GenomicRanges 
-get_counts_from_bam <- function(bamfile, peaks, ISPAIRED = FALSE){
+get_counts_from_bam <- function(bamfile, peaks){
   param = ScanBamParam(which = peaks, what = c("rname", "pos", "strand", "qwidth"))
   counts = countBam(bamfile, param = param, flag = scanBamFlag(isDuplicate = FALSE, isUnmappedQuery = FALSE))
-  return(counts[,c("space", "start", "end", "records")])
+  return(counts[,c("space", "start", "end", "file", "records")])
+}
+
+#' get_counts_matrix
+#' @param bamfiles a vector of filenames of input bam files
+#' @param peaks a bed15 format file returned from select_peaks
+#' @return a matrix of chrom, start, end of peaks followed by counts of each bam file in bamfiles
+#' @keywords peaks
+#' @keywords counts
+#' @export
+#' get_counts_matrix()
+get_counts_matrix <- function(bamfiles, peaks){
+  peaks = peaks2GRanges(peaks)
+  counts_list = lapply(bamfiles, function(x) get_counts_from_bam(x, peaks))
+  sample_names = c(do.call(rbind, lapply(counts_list, function(x) head(toString(x$file[1])))))
+  counts_mat = do.call(cbind, lapply(counts_list, function(x) x$records))
+  colnames(counts_mat) = sample_names
+  counts_info = data.frame(chrom = counts_list[[1]]$space, start = counts_list[[1]]$start, end = counts_list[[1]]$end)
+  return(data.frame(counts_info, counts_mat))
 }
 
