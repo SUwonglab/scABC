@@ -1,0 +1,19 @@
+---
+title: "Example workflow of scABC"
+author: "Timothy Daley"
+date: "4/30/2017"
+output: html_document
+---
+
+We're gonna walk through an example analysis of unsupervised clustering using *scABC*.  The data we will use is the incedence count matrix of DNase hypersensitivity sites from a mixture of GM12878 and HL60 cells from Cusanovich et al (http://science.sciencemag.org/content/348/6237/910), available through GEO at https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSM1647123.  
+
+```{r}
+setwd("~/scRNAseqAnalysis/scATAC-RNAseq/scABC/vignettes/")
+count_matrix = read.table(file = "GSM1647123_GM12878vsHL.dhsmatrix.txt", header = TRUE)
+count_matrix[1:6, 1:6]
+```
+
+```{r}
+# compute foreground and background
+```
+
