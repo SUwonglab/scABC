@@ -5,15 +5,30 @@ date: "4/30/2017"
 output: html_document
 ---
 
-We're gonna walk through an example analysis of unsupervised clustering using *scABC*.  The data we will use is the incedence count matrix of DNase hypersensitivity sites from a mixture of GM12878 and HL60 cells from Cusanovich et al (http://science.sciencemag.org/content/348/6237/910), available through GEO at https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSM1647123.  
+We're going to walk through an example workflow for the scABC package, walking through all the individual steps of the analysis.  We'll use the 6 cell line mixture for an example.  The 1632 cells can be downloaded from GEO under accession number GSE65360 (https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE65360).  
 
-```{r}
-setwd("~/scRNAseqAnalysis/scATAC-RNAseq/scABC/vignettes/")
-count_matrix = read.table(file = "GSM1647123_GM12878vsHL.dhsmatrix.txt", header = TRUE)
-count_matrix[1:6, 1:6]
+## Pre-processing
+
+We used Kundaje pipeline for aligning pair ended reads to hg19 and removing duplicates (https://github.com/kundajelab/atac_dnase_pipelines) with the command below for each read pair file.
+```{r engine='bash', eval=FALSE}
+bds_scr [SCR_NAME] atac.bds -align -species hg19 -species_file [SPECIES_FILE_PATH] -nth [NUM_THREADS] -fastq1_1 [READ_PAIR1] -fastq1_2 [READ_PAIR2]
+```
+For details on the pipeline, visit the Kundaje lab website or github page.
+
+The resulting bam files were merged using samtools.
+```{r engine='bash', eval=FALSE}
+samtools merge [AGGREGATE_BAM] *.trim.PE2SE.nodup.bam
+```
+The merged bam file was then used as input into MACS2 to call merged peaks for later analysis, using the Kundaje pipeline again.
+```{r engine='bash', eval=FALSE}
+bds_scr [SCR_NAME] atac.bds -species hg19 -species_file [SPECIES_FILE_PATH] -nth [NUM_THREADS] -se -filt_bam [AGGREGATE_BAM]
 ```
 
+## Obtaining and filtering counts
+
+We'll use scABC for the analysis
 ```{r}
-# compute foreground and background
+setwd("~/scRNAseqAnalysis/scATAC-RNAseq/scABC/vignettes/")
+
 ```
 

@@ -18,8 +18,8 @@ select_peaks <- function(filename, thresh = 1){
   return(wanted_peaks)
 }
 
-peaks2GRanges <- function(peaks){
-  peaks.gr = with(peaks, GRanges(chrom, IRanges(start, end), id = name, pVal = pValue))
+peaks2GRanges <- function(peaks, upstream = 0, downstream = 0){
+  peaks.gr = with(peaks, GRanges(chrom, IRanges(start - upstream, end + downstream), id = name, pVal = pValue))
 }
 
 # peaks should be in GenomicRanges 
@@ -46,5 +46,48 @@ get_counts_matrix <- function(bamfiles, peaks){
   colnames(counts_mat) = sample_names
   counts_info = data.frame(chrom = counts_list[[1]]$space, start = counts_list[[1]]$start, end = counts_list[[1]]$end)
   return(data.frame(counts_info, counts_mat))
+}
+
+#' compute_background
+#' @param bamfiles a vector of filenames of input bamfiles
+#' @param peaks a bed15 format file returned from select peaks
+#' @param upstream number of bases upstream of peak to consider for computing background
+#' @param downstream number of bases downstream of peak to consider for computing background
+#' @return a matrix of chrom, start, end of peaks followed by background counts for each bam file in bamfiles
+#' @import Rsamtools
+#' @import GenomicRanges
+#' @export compute_background
+compute_background <- function(bamfiles, peaks, upstream = 500000, downstream = 500000){
+  background_peaks = peaks2GRanges(peaks, upstream, downstream)
+  counts_list = lapply(bamfiles, function(x) get_counts_from_bam(x, peaks))
+  sample_names = c(do.call(rbind, lapply(counts_list, function(x) head(toString(x$file[1])))))
+  background_counts = do.call(cbind, lapply(counts_list, function(x) x$records))
+  colnames(background_counts) = sample_names
+  counts_info = data.frame(chrom = counts_list[[1]]$space, start = counts_list[[1]]$start, end = counts_list[[1]]$end)
+  return(data.frame(counts_info, background_counts))
+}
+
+#' filter_background
+#' @param ForeGround matrix or data frame of Foreground values
+#' @param BackGround matrix or data frame of BackGround values
+#' @param thresh threshold of the median number of reads in background
+#' @return filtered ForeGround and BackGround
+#' @export filter_background
+filter_background <- function(ForeGround, BackGround, thresh = 2){
+  which_samples_pass = which(apply(BackGround, 1, median) > thresh)
+  return(list(ForeGround = ForeGround[,which_samples_pass], 
+              BackGround = BackGround[,which_samples_pass]))
+}
+
+#' filter_peaks
+#' @param ForeGround matrix or data frame of Foreground values
+#' @param nreads_thresh threshold of the number of reads
+#' @param ncells_thresh threshold of the number of cells
+#' @return filtered ForeGround and BackGround
+#' @export filter_peaks
+filter_peaks <- function(ForeGround, nreads_thresh = 2, ncells_thresh){
+  which_peaks_pass = which(apply(ForeGround, 2, 
+                                 function(x) which(length(x[which(x >= nreads_thresh)] >= ncells_thresh))))
+  return(list(ForeGround = ForeGround[which_peaks_pass,]))
 }
 
