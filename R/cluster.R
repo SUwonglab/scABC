@@ -27,7 +27,7 @@ compute_landmarks <- function(ForeGround, BackGround, nCluster = 2, lambda = 1, 
   q = median(BGmedian);
   lambda = 1;
   weights = 1/(1 + exp(-lambda*(BGmedian - q)));
-  kMeds = wcKMediods(FGdist, k = nCluster, weights = weights);
+  kMeds = wcKMedoids(FGdist, k = nCluster, weights = weights);
   kMedsCluster = kMeds$clustering;
   kMedsCluster = as.numeric(factor(kMedsCluster));
 
@@ -65,15 +65,15 @@ assign2landmarks <- function(ForeGround, topLandmarks){
 #' @name getClusterSpecificPvalue
 #' @param data matrix of peaks by cells counts
 #' @param cluster matrix of cluster indicator membership 
-#' @param offset corresponds to h_i, here it is a vector of length n
+#' @param background_median median background values for each cell
 #' @param landmark optional. If landmark is provided, we only do hypothesis testing on the union of landmark peaks
-getClusterSpecificPvalue <- function(data, cluster, offset, 
+getClusterSpecificPvalue <- function(ForeGround, cluster_assignments, background_medians, 
                                      landmark=NULL, maxiter=1000, thresMLE=10^-3, 
                                      thresMAP=10^-5, quiet=TRUE){
   ## the main function for peak selection
   ## data is nPeaks(p) by Cells(n)
   ## cluster is the cluster membership matrix, length n. Take entries 1 to nCluster
-  ## offset corresponds to h_i, here it is a vector of length n
+  ## background_medians corresponds to h_i, here it is a vector of length n
   ## landmark is optional. If landmark is provided, we only do hypothesis testing on the union of landmark peaks
   if (!is.null(landmark)){
     ## take union of the landmark peaks
@@ -90,7 +90,7 @@ getClusterSpecificPvalue <- function(data, cluster, offset,
     cat("\nEstimating beta MLE\n")  
   }
   betaMLE_ini <- matrix(0, nrow=length(unique(cluster)), ncol=ncol(data))
-  betaMLE <- getbetaMLE(data=data, cluster=cluster, offset=offset, beta_ini=betaMLE_ini, maxiter=maxiter, thres=thresMLE, quiet=quiet)
+  betaMLE <- getbetaMLE(data=data, cluster=cluster, background_medians=background_medians, beta_ini=betaMLE_ini, maxiter=maxiter, thres=thresMLE, quiet=quiet)
   
   ## get the empirical prior sigma
   sigmas <- getSigmaPrior(betaMLE)
@@ -100,7 +100,7 @@ getClusterSpecificPvalue <- function(data, cluster, offset,
     cat("\nEstimating beta MAP\n")
   }
   betaMAP_ini <- rbind(0, matrix(0, nrow=length(unique(cluster)), ncol=ncol(data)))
-  result <- getbetaMAP(data=data, cluster=cluster, offset=offset, sigmas=sigmas, beta_ini=betaMAP_ini, maxiter=maxiter, thres=thresMAP, quiet=quiet)
+  result <- getbetaMAP(data=data, cluster=cluster, background_medians=background_medians, sigmas=sigmas, beta_ini=betaMAP_ini, maxiter=maxiter, thres=thresMAP, quiet=quiet)
   
   if (!is.null(landmark)){
     betaMAP <- matrix( nrow=length(unique(cluster))+1, ncol=p )
@@ -116,12 +116,12 @@ getClusterSpecificPvalue <- function(data, cluster, offset,
 }
 
 
-getbetaMLE <- function(data, cluster, offset, 
+getbetaMLE <- function(data, cluster, background_medians, 
                        beta_ini = 1, maxiter = 1000, 
                        thres = 1e-5, quiet = TRUE){
   ## data is n by p
   ## cluster is the cluster membership matrix, length n. Take entries 1 to nCluster
-  ## offset corresponds to h_i, here it is a vector of length n
+  ## background_medians corresponds to h_i, here it is a vector of length n
   p <- ncol(data)
   x <- getdesign(cluster)
   beta <- beta_ini
@@ -132,7 +132,7 @@ getbetaMLE <- function(data, cluster, offset,
   converged <- 0
   iter <- 1
   while (!converged & iter<maxiter){
-    mu <- offset*exp(x%*%beta) 
+    mu <- background_medians*exp(x%*%beta) 
     u <- crossprod(x, data-mu)
     updateBeta <- function(r){
       if (converged_flag[r]==0 & !is.na(beta[1,r]) ){
@@ -194,11 +194,11 @@ getSigmaPrior <- function(beta, q=0.05){
   return(sigmas)
 }
 
-getbetaMAP <- function(data, cluster, offset, sigmas, beta_ini, maxiter, thres, quiet){
+getbetaMAP <- function(data, cluster, background_medians, sigmas, beta_ini, maxiter, thres, quiet){
   ## data is n by p
   ## beta_ini includes the intercept
   ## cluster is the cluster membership matrix, length n. Take entries 1 to nCluster
-  ## offset corresponds to h_i, here it is a vector of length n
+  ## background_medians corresponds to h_i, here it is a vector of length n
   
   p <- ncol(data)
   x <- getdesign(cluster)
@@ -215,8 +215,8 @@ getbetaMAP <- function(data, cluster, offset, sigmas, beta_ini, maxiter, thres, 
   converged <- 0
   iter <- 1
   while (!converged & iter<maxiter){
-    mu <- offset*exp(x%*%beta) 
-    z <- log(mu/offset) + (data-mu)/mu
+    mu <- background_medians*exp(x%*%beta) 
+    z <- log(mu/background_medians) + (data-mu)/mu
     
     updateBetaRidge <- function(r){
       if (converged_flag[r]==0){
@@ -243,7 +243,7 @@ getbetaMAP <- function(data, cluster, offset, sigmas, beta_ini, maxiter, thres, 
     }
     iter <- iter + 1
   }
-  mu <- offset*exp(x%*%beta) 
+  mu <- background_medians*exp(x%*%beta) 
   
   ## get all the contrast matrices and cluster label for each contrast
   nCluster <- length(unique(cluster))

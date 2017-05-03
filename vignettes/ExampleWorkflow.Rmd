@@ -24,11 +24,30 @@ The merged bam file was then used as input into MACS2 to call merged peaks for l
 bds_scr [SCR_NAME] atac.bds -species hg19 -species_file [SPECIES_FILE_PATH] -nth [NUM_THREADS] -se -filt_bam [AGGREGATE_BAM]
 ```
 
+Several of the cells have multiple runs.  We merged these runs using samtools.
+
 ## Obtaining and filtering counts
 
-We'll use scABC for the analysis
-```{r}
+We will use scABC to analyse the single cell data.  The cell level bam files and their samtools indexes are contained in the folder bams.
+```{r cache=TRUE}
 setwd("~/scRNAseqAnalysis/scATAC-RNAseq/scABC/vignettes/")
-
+source("~/scRNAseqAnalysis/scATAC-RNAseq/scABC/R/read_data.R")
+library(GenomicRanges)
+library(Rsamtools)
+bamfile.table = read.table(file = "NoTreatment/6Lines/SRX&Type&Batch.txt")
+head(bamfile.table)
+bamfiles = paste0("bams/", bamfile.table[,1], ".bam")
+peaks = select_peaks("NoTreatment/6Lines/mergeAll.tn5.pf.gappedPeak")
+dim(peaks)
+ForeGround = get_counts_matrix(bamfiles, peaks)
+ForeGroundFiltered = filter_peaks(ForeGround$ForeGround, ForeGround$peaks)
+peaks = ForeGroundFiltered$peaks
+BackGround = get_background(bamfiles, ForeGroundFiltered$peaks)
+ForeGroundBackGroundFiltered = filter_background(ForeGround = ForeGroundFiltered$ForeGround, BackGround = BackGround$BackGround)
 ```
-
+```{r cache=TRUE, echo=FALSE}
+#ForeGround=read.table(file = "6cellInSilicoMixtureFullForeGroundPeakFiltered.txt", header=TRUE)
+```
+```{r}
+#ForeGround[1:6, 1:6]
+```
