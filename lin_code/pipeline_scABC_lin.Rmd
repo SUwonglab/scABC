@@ -328,3 +328,137 @@ resultPeakSelection <- getClusterSpecificPvalue(data=ForeGround, cluster=cluster
 ## cluster specific p-values. Each column correspond to a cluster
 ## the NA values in beta_MAP and pvalue represent the non-landmark peaks, which is not tested if landmark is provided.
 ```
+
+## Determine cluster number with gap statistics
+
+additional functions needed
+
+```{r}
+getGapStat <- function(ForeGround, BackGroundMedian, nClusters=1:10, nPerm=10, quiet=FALSE){
+  ## sort nClusters from small to large
+  nClusters <- sort(nClusters, decreasing=FALSE)
+  
+  ##
+  lambda <- 0.1
+  c <- quantile(BackGroundMedian, 0.5)
+  W <- 1/(1+exp(-(BackGroundMedian-c)/(lambda*c)))
+  distS <- 1-cor(ForeGround, method="spearman")
+  
+  ## function for calculating the objective
+  calObj <- function(cluster, distMatrix, weight){
+  ## may encounter problem when there is singleton
+  diag(distMatrix) <- 0
+  medoids <- unique(cluster)  
+  Obj <- 0
+  for (medoid in medoids){
+    disttmp <- distMatrix[medoid,which(cluster==medoid)] 
+    weighttmp <- weight[which(cluster==medoid)]
+    Obj <- Obj + sum(disttmp*weighttmp)
+  }
+  return(Obj)
+  }
+  
+  ## turn off warning for wcKMedoids
+  options(warn=-1)
+  ##
+  if (!quiet){
+    cat("\nCalculate gap statistic for data\n")
+  }
+  ObjData_nClusters <- c()
+  count <- 0 
+  for (nCluster in nClusters){
+    if (nCluster==1){
+      ObjData <- min(rowSums(t(t(distS)*W)))
+      ObjData_nClusters <- c(ObjData_nClusters, ObjData) 
+    } else {
+      resultW <- wcKMedoids(distS, k=nCluster, weights=W)
+      clusterW <- resultW$clustering
+      ObjData <- calObj(cluster=clusterW, distMatrix=distS, weight=W) 
+      ObjData_nClusters <- c(ObjData_nClusters, ObjData) 
+    }
+    count <- count + 1
+    if (!quiet){
+        cat("\r", round((count/length(nClusters))*100), "%","completed")
+    }
+  }
+  
+  if (!quiet){
+    cat("\nCalculate gap statistic for permutation\n")
+  }
+  
+  ObjPerm_nClusters <- matrix(nrow=nPerm, ncol=length(nClusters))
+  for (perm in 1:nPerm){
+    ForeGroundPerm <- t(apply(ForeGround, 1, sample))
+    distP <- 1-cor(ForeGroundPerm, method="spearman")
+    ObjPA <- c()
+    count <- 0
+    for (nCluster in nClusters){
+      count <- count + 1
+      if (!quiet){
+        cat("\r", round((perm-1+count/length(nClusters))/nPerm*100), "%", "completed")
+      }
+      if (nCluster==1){
+        ObjP <- min(rowSums(t(t(distP)*W)))
+        ObjPA <- c(ObjPA, ObjP)  
+      } else {
+        resultP <- wcKMedoids(distP, k=nCluster, weights=W)
+        clusterP <- resultP$clustering
+        ObjP <- calObj(cluster=clusterP, distMatrix=distP, weight=W) 
+        ObjPA <- c(ObjPA, ObjP)  
+      }
+    }
+    ObjPerm_nClusters[perm,] <- ObjPA
+  }
+  ## turn on warning
+  options(warn=0)
+  
+  ## get the optimal number of clusters
+  ymean <- apply(log(ObjPerm_nClusters), 2, mean) - log(ObjData_nClusters)
+  ysd <- apply(log(ObjPerm_nClusters), 2, sd)
+  
+  flag <- ymean[-length(nClusters)] >= (ymean - ysd)[-1]
+  if (sum(flag)){
+    nClusterOptimal <- min(which(flag)) 
+  } else {
+    warning("Increase the maximum cluster number")
+    nClusterOptimal <- max(nClusters)
+  }
+  
+  return(list(ObjData=ObjData_nClusters, ObjPerm=ObjPerm_nClusters, nClusterOptimal=nClusterOptimal))
+}
+
+plotGapStat <- function(GapStat, nClusters, main, fold=1, cex=0.3, lty=2){
+  ObjPerm <- GapStat$ObjPerm
+  ObjData <- GapStat$ObjData
+  ymean <- apply(log(ObjPerm), 2, mean) - log(ObjData)
+  ysd <- apply(log(ObjPerm), 2, sd)
+  
+  plot(nClusters, ymean,
+    ylim=range(c(ymean-ysd, ymean+ysd)),
+    pch=19, xlab="Number of clusters", ylab="Gap", cex=cex,
+    main=main)
+  lines(nClusters, ymean, col="red", lty=lty)
+# hack: we draw arrows but with very special "arrowheads"
+  arrows(nClusters, ymean-ysd, nClusters, ymean+ysd, length=0.05, angle=90, code=3)
+  return(1)
+}
+```
+
+run it
+
+```{r}
+nClusters <- 1:10
+GapStat <- getGapStat(ForeGround=ForeGround, BackGroundMedian=BackGroundMedian, nClusters=nClusters)
+```
+
+the optimal number of cluster
+
+```{r}
+print(GapStat$nClusterOptimal)
+```
+
+plot it 
+
+```{r}
+plotGapStat(GapStat, nClusters=nClusters, main="6 cell line")
+```
