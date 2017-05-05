@@ -49,9 +49,9 @@ InSilicoBackGround = ForeGroundBackGroundFiltered$BackGround
 InSilicoPeaks = peaks
 ```
 ```{r echo=FALSE, cache=TRUE}
-InSilicoForeGround = read.table(file = "NoTreatment/6Lines/6linesFilteredForeGround.txt", header = TRUE)
-InSilicoBackGround = read.table(file = "NoTreatment/6Lines/6linesFilteredBackGround.txt", header = TRUE)
-InSilicoPeaks = read.table(file = "NoTreatment/6Lines/6linesFilteredPeaks.txt", header = TRUE)
+InSilicoForeGround = read.table(file = "NoTreatment/6Lines/InSilicoForeGround.txt", header = TRUE)
+InSilicoBackGround = read.table(file = "NoTreatment/6Lines/InSilicoBackGround.txt", header = TRUE)
+InSilicoPeaks = read.table(file = "NoTreatment/6Lines/InSilicoPeaks.txt", header = TRUE)
 bamfile.table = read.table(file = "NoTreatment/6Lines/SRX&Type&Batch.txt")
 ```
 
