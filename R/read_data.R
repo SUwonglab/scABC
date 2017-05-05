@@ -7,13 +7,13 @@ sort_peaks <- function(peaks){
 #' @return significant peaks obtained by filtering by p-value
 #' @keywords peaks
 #' @export select_peaks
-select_peaks <- function(filename, thresh = 1){
+select_peaks <- function(filename, thresh = 2){
   column_names = c("chrom", "start", "end", "name", "score", "strand",
                    "thickStart", "thickEnd", "itemRgb", "blockCount", "blockSizes",
                    "blockStarts", "signalValue", "pValue", "qValue");
   gapped_peaks = read.table(file = filename, header = FALSE, sep = "\t",
                             stringsAsFactors = FALSE, col.names = column_names);
-  wanted_peaks = which(gapped_peaks$pValue > thresh); # pValue is -log10(p), p < 0.1 => pValue > 1
+  wanted_peaks = which(gapped_peaks$pValue > thresh); # pValue is -log10(p), p < 0.1 => pValue > 2
   wanted_peaks = sort_peaks(gapped_peaks[wanted_peaks, ])
   return(wanted_peaks)
 }
@@ -73,7 +73,7 @@ get_background <- function(bamfiles, peaks, upstream = 500000, downstream = 5000
 #' @param thresh threshold of the median number of reads in background
 #' @return filtered ForeGround and BackGround
 #' @export filter_background
-filter_background <- function(ForeGround, BackGround, thresh = 2){
+filter_background <- function(ForeGround, BackGround, median_bg_thresh = 2){
   stopifnot(dim(ForeGround) == dim(BackGround))
   which_samples_pass = which(apply(BackGround, 2, median) > thresh)
   return(list(ForeGround = ForeGround[,which_samples_pass], 

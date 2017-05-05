@@ -29,7 +29,7 @@ Several of the cells have multiple runs.  We merged these runs using samtools.
 ## Obtaining and filtering counts
 
 We will use scABC to analyse the single cell data.  The cell level bam files and their samtools indexes are contained in the folder bams.
-```{r cache=TRUE}
+```{r eval=FALSE}
 setwd("~/scRNAseqAnalysis/scATAC-RNAseq/scABC/vignettes/")
 source("~/scRNAseqAnalysis/scATAC-RNAseq/scABC/R/read_data.R")
 library(GenomicRanges)
@@ -44,10 +44,60 @@ ForeGroundFiltered = filter_peaks(ForeGround$ForeGround, ForeGround$peaks)
 peaks = ForeGroundFiltered$peaks
 BackGround = get_background(bamfiles, ForeGroundFiltered$peaks)
 ForeGroundBackGroundFiltered = filter_background(ForeGround = ForeGroundFiltered$ForeGround, BackGround = BackGround$BackGround)
+InSilicoForeGround = ForeGroundBackGroundFiltered$ForeGround
+InSilicoBackGround = ForeGroundBackGroundFiltered$BackGround
+InSilicoPeaks = peaks
 ```
-```{r cache=TRUE, echo=FALSE}
-#ForeGround=read.table(file = "6cellInSilicoMixtureFullForeGroundPeakFiltered.txt", header=TRUE)
+```{r echo=FALSE, cache=TRUE}
+InSilicoForeGround = read.table(file = "NoTreatment/6Lines/6linesFilteredForeGround.txt", header = TRUE)
+InSilicoBackGround = read.table(file = "NoTreatment/6Lines/6linesFilteredBackGround.txt", header = TRUE)
+InSilicoPeaks = read.table(file = "NoTreatment/6Lines/6linesFilteredPeaks.txt", header = TRUE)
+bamfile.table = read.table(file = "NoTreatment/6Lines/SRX&Type&Batch.txt")
 ```
-```{r}
-#ForeGround[1:6, 1:6]
+
+Now let's compute the landmarks and take a look at them.
+
+```{r cache=TRUE, message=FALSE}
+setwd("~/scRNAseqAnalysis/scATAC-RNAseq/scABC/vignettes/")
+source("~/scRNAseqAnalysis/scATAC-RNAseq/scABC/R/read_data.R")
+source("~/scRNAseqAnalysis/scATAC-RNAseq/scABC/R/cluster.R")
+library(GenomicRanges)
+library(Rsamtools)
+library(WeightedCluster)
+InSilicoLandMarks = compute_landmarks(ForeGround = InSilicoForeGround, BackGround = InSilicoBackGround, nCluster = 6, lambda = 1, nTop = 2000)
+cor(InSilicoLandMarks, InSilicoLandMarks, method = 'spearman')
+```
+
+It looks like the cluster landmarks are well seperated.  Let's look at the cell to cluster assignments.
+
+```{r cache=TRUE}
+InSilicoLandMarkAssignments = assign2landmarks(ForeGround = InSilicoForeGround, InSilicoLandMarks)
+InSilicoCell2LandmarkCorrelation = cbind(apply(InSilicoForeGround, 2, function(x) cor(x, InSilicoLandMarks[,1], method = 'spearman')), 
+                                         apply(InSilicoForeGround, 2, function(x) cor(x, InSilicoLandMarks[,2], method = 'spearman')), 
+                                         apply(InSilicoForeGround, 2, function(x) cor(x, InSilicoLandMarks[,3], method = 'spearman')), 
+                                         apply(InSilicoForeGround, 2, function(x) cor(x, InSilicoLandMarks[,4], method = 'spearman')), 
+                                         apply(InSilicoForeGround, 2, function(x) cor(x, InSilicoLandMarks[,5], method = 'spearman')), 
+                                         apply(InSilicoForeGround, 2, function(x) cor(x, InSilicoLandMarks[,6], method = 'spearman')))
+cell.info = bamfile.table[which(paste0(bamfile.table[,1], ".bam") %in% colnames(InSilicoForeGround)), 2]
+library(gplots) 
+library(RColorBrewer)
+library(devtools)
+source_url("https://raw.githubusercontent.com/obigriffith/biostar-tutorials/master/Heatmaps/heatmap.3.R")
+scalered <- colorRampPalette(c("white", "red"), space = "rgb")(256)
+rcols1 = brewer.pal(6, "Accent")[1:6]
+rowcols1 = rcols1[cell.info]
+rcols2 = brewer.pal(6, "Dark2")[1:6]
+rowcols2 = rcols2[InSilicoLandMarkAssignments]
+rowcols = rbind(rowcols1, rowcols2)
+rownames(rowcols) = c("rep info", "cluster")
+heatmap.3(InSilicoCell2LandmarkCorrelation, dendrogram='none', Rowv=FALSE, Colv=FALSE, trace='none', col = scalered, margin = c(5, 5), density.info = "none", RowSideColors = rowcols, RowSideColorsSize=2)
+legend("bottomleft", legend = c(unique(cell.info), paste0("cluster ", 1:6)), col = c(rcols1, rcols2), border=FALSE, bty="n", y.intersp = 0.7, cex=0.7, pch = 15)
+```
+
+The clustering correctly classifies all cells except for 1.  This assumes we knew the number of clusters.  What if we let scABC choose the number of clusters?
+
+```{r cache=TRUE}
+InSilicoBackGroundMedian = apply(InSilicoBackGround, 2, median)
+InSilicoGapStat = getGapStat(InSilicoForeGround, InSilicoBackGroundMedian, nClusters=1:10)
+plotGapStat(InSilicoGapStat, nClusters = 1:10, main = "In Silico Gap Stat")
 ```
