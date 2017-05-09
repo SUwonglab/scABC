@@ -1,5 +1,4 @@
 
-
 select_top <-function(x, n_top){
   thresh = sort(x, decreasing = TRUE)[n_top]
   x[x < thresh] = 0;
@@ -74,25 +73,25 @@ getClusterSpecificPvalue <- function(ForeGround, cluster_assignments, background
                                      thresMAP=10^-5, quiet=TRUE){
   ## the main function for peak selection
   ## data is nPeaks(p) by Cells(n)
-  ## cluster is the cluster membership matrix, length n. Take entries 1 to nCluster
+  ## cluster_assignments is the cluster membership matrix, length n. Take entries 1 to nCluster
   ## background_medians corresponds to h_i, here it is a vector of length n
   ## landmark is optional. If landmark is provided, we only do hypothesis testing on the union of landmark peaks
   if (!is.null(landmark)){
     ## take union of the landmark peaks
     unionlandmark <- which(rowSums(landmark)!=0)
-    p <- nrow(data)
-    data <- data[unionlandmark,]
+    p <- nrow(ForeGround)
+    ForeGround <- ForeGround[unionlandmark,]
   } else {
   }
   
-  data <- t(data) # make data n by p
+  ForeGround <- t(ForeGround) # make data n by p
   
   ## get beta_MLE
   if (!quiet){
     cat("\nEstimating beta MLE\n")  
   }
-  betaMLE_ini <- matrix(0, nrow=length(unique(cluster)), ncol=ncol(data))
-  betaMLE <- getbetaMLE(data=data, cluster=cluster, background_medians=background_medians, beta_ini=betaMLE_ini, maxiter=maxiter, thres=thresMLE, quiet=quiet)
+  betaMLE_ini <- matrix(0, nrow=length(unique(cluster_assignments)), ncol=ncol(ForeGround))
+  betaMLE <- getbetaMLE(data=ForeGround, cluster=cluster_assignments, background_medians=background_medians, beta_ini=betaMLE_ini, maxiter=maxiter, thres=thresMLE, quiet=quiet)
   
   ## get the empirical prior sigma
   sigmas <- getSigmaPrior(betaMLE)
@@ -101,19 +100,19 @@ getClusterSpecificPvalue <- function(ForeGround, cluster_assignments, background
   if (!quiet){
     cat("\nEstimating beta MAP\n")
   }
-  betaMAP_ini <- rbind(0, matrix(0, nrow=length(unique(cluster)), ncol=ncol(data)))
-  result <- getbetaMAP(data=data, cluster=cluster, background_medians=background_medians, sigmas=sigmas, beta_ini=betaMAP_ini, maxiter=maxiter, thres=thresMAP, quiet=quiet)
+  betaMAP_ini <- rbind(0, matrix(0, nrow=length(unique(cluster_assignments)), ncol=ncol(ForeGround)))
+  result <- getbetaMAP(data=ForeGround, cluster=cluster_assignments, background_medians=background_medians, sigmas=sigmas, beta_ini=betaMAP_ini, maxiter=maxiter, thres=thresMAP, quiet=quiet)
   
   if (!is.null(landmark)){
-    betaMAP <- matrix( nrow=length(unique(cluster))+1, ncol=p )
-    pvalue <- matrix( nrow=p, ncol=length(unique(cluster)) )
+    betaMAP <- matrix( nrow=length(unique(cluster_assignments))+1, ncol=p )
+    pvalue <- matrix( nrow=p, ncol=length(unique(cluster_assignments)) )
     betaMAP[, unionlandmark] <- result$beta
     pvalue[unionlandmark,] <- result$pvalue
   } else {
     betaMAP <- result$beta
     pvalue <- result$pvalue
   }
-  colnames(pvalue) <- paste("Cluster", 1:length(unique(cluster)) )
+  colnames(pvalue) <- paste("Cluster", 1:length(unique(cluster_assignments)) )
   return(list(betaMAP=betaMAP, sigmas=sigmas, pvalue=pvalue))
 }
 
@@ -308,7 +307,8 @@ getContrast <- function(nCluster){
 
 
 
-getGapStat <- function(ForeGround, BackGroundMedian, nClusters=1:10, nPerm=10, quiet=FALSE){
+getGapStat <- function(ForeGround, BackGroundMedian, nClusters=1:10, 
+                       nPerm=10, nTop = 10000, quiet=FALSE){
   ## sort nClusters from small to large
   nClusters <- sort(nClusters, decreasing=FALSE)
   
@@ -316,10 +316,11 @@ getGapStat <- function(ForeGround, BackGroundMedian, nClusters=1:10, nPerm=10, q
   lambda <- 0.1
   c <- quantile(BackGroundMedian, 0.5)
   W <- 1/(1+exp(-(BackGroundMedian-c)/(lambda*c)))
-  distS <- 1-cor(ForeGround, method="spearman")
+  distS <- 1-cor(ForeGround[head(order(apply(ForeGround, 1, sum), decreasing = TRUE), nTop), ], 
+                 method="spearman")
   
   ## function for calculating the objective
-  calObj <- function(cluster, distMatrix, weight){
+  calObj <- function(cluster, distMatrix, weight, nTop){
     ## may encounter problem when there is singleton
     diag(distMatrix) <- 0
     medoids <- unique(cluster)  

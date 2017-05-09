@@ -57,20 +57,24 @@ bamfile.table = read.table(file = "NoTreatment/6Lines/SRX&Type&Batch.txt")
 
 Now let's compute the landmarks and take a look at them.
 
-```{r cache=TRUE, message=FALSE}
+```{r message=FALSE, cache=TRUE}
 setwd("~/scRNAseqAnalysis/scATAC-RNAseq/scABC/vignettes/")
 source("~/scRNAseqAnalysis/scATAC-RNAseq/scABC/R/read_data.R")
 source("~/scRNAseqAnalysis/scATAC-RNAseq/scABC/R/cluster.R")
 library(GenomicRanges)
 library(Rsamtools)
 library(WeightedCluster)
-InSilicoLandMarks = compute_landmarks(ForeGround = InSilicoForeGround, BackGround = InSilicoBackGround, nCluster = 6, lambda = 1, nTop = 2000)
+InSilicoLandMarks = compute_landmarks(ForeGround = InSilicoForeGround, 
+                                      BackGround = InSilicoBackGround, 
+                                      nCluster = 6, lambda = 1, nTop = 2000)
+# look at correlation between landmarks
 cor(InSilicoLandMarks, InSilicoLandMarks, method = 'spearman')
 ```
 
 It looks like the cluster landmarks are well seperated.  Let's look at the cell to cluster assignments.
 
 ```{r cache=TRUE}
+# assign cells to the closest landmark
 InSilicoLandMarkAssignments = assign2landmarks(ForeGround = InSilicoForeGround, InSilicoLandMarks)
 InSilicoCell2LandmarkCorrelation = cbind(apply(InSilicoForeGround, 2, function(x) cor(x, InSilicoLandMarks[,1], method = 'spearman')), 
                                          apply(InSilicoForeGround, 2, function(x) cor(x, InSilicoLandMarks[,2], method = 'spearman')), 
@@ -96,8 +100,100 @@ legend("bottomleft", legend = c(unique(cell.info), paste0("cluster ", 1:6)), col
 
 The clustering correctly classifies all cells except for 1.  This assumes we knew the number of clusters.  What if we let scABC choose the number of clusters?
 
-```{r cache=TRUE}
+```{r message=FALSE, cache=TRUE}
+# compute cell-level background median
 InSilicoBackGroundMedian = apply(InSilicoBackGround, 2, median)
-InSilicoGapStat = getGapStat(InSilicoForeGround, InSilicoBackGroundMedian, nClusters=1:10)
-plotGapStat(InSilicoGapStat, nClusters = 1:10, main = "In Silico Gap Stat")
+InSilicoGapStat = getGapStat(InSilicoForeGround, InSilicoBackGroundMedian, nClusters=1:20, quiet = TRUE)
+plotGapStat(InSilicoGapStat, nClusters = 1:20, main = "In Silico Gap Stat")
+```
+
+scABC chooses 6 clusters and we can continue with this number of clusters.
+
+```{r cache=TRUE}
+InSilicoPeakSelection = getClusterSpecificPvalue(ForeGround=InSilicoForeGround, cluster_assignments = InSilicoLandMarkAssignments, background_medians = InSilicoBackGroundMedian, landmark = InSilicoLandMarks)
+head(InSilicoPeakSelection$pvalue)
+dim(InSilicoPeakSelection$pvalue)
+```
+
+Note that peaks that don't belong to a landmark then the p-value is NA.  Let's restrict all peaks to peaks with $p$-values.
+
+```{r}
+which_peaks = which(!is.na(InSilicoPeakSelection$pvalue[,1]))
+InSilicoForeGround = InSilicoForeGround[which_peaks, ]
+InSilicoPeaks = InSilicoPeaks[which_peaks, ]
+InSilicoPeakPvals = InSilicoPeakSelection$pvalue[which_peaks, ]
+```
+
+Let's visualize the data.
+
+```{r cache=TRUE}
+# take the top 400 peaks for each cluster
+Cluster1Peaks = head(order(InSilicoPeakPvals[,1], decreasing = FALSE), 400)
+Cluster2Peaks = head(order(InSilicoPeakPvals[,2], decreasing = FALSE), 400)
+Cluster3Peaks = head(order(InSilicoPeakPvals[,3], decreasing = FALSE), 400)
+Cluster4Peaks = head(order(InSilicoPeakPvals[,4], decreasing = FALSE), 400)
+Cluster5Peaks = head(order(InSilicoPeakPvals[,5], decreasing = FALSE), 400)
+Cluster6Peaks = head(order(InSilicoPeakPvals[,6], decreasing = FALSE), 400)
+ClusterSpecificPeaks = union(Cluster1Peaks, union(Cluster2Peaks, union(Cluster3Peaks, union(Cluster4Peaks, union(Cluster5Peaks, Cluster6Peaks)))))
+length(ClusterSpecificPeaks)
+# all peaks are cluster specific
+scalered <- colorRampPalette(c("white", "red"), space = "rgb")(256)
+rcols1 = brewer.pal(6, "Accent")[1:6]
+rowcols1 = rcols1[cell.info]
+rcols2 = brewer.pal(6, "Dark2")[1:6]
+rowcols2 = rcols2[InSilicoLandMarkAssignments]
+rowcols = rbind(rowcols1, rowcols2)
+rownames(rowcols) = c("rep info", "cluster")
+x = t(InSilicoForeGround)
+#truncate to see patterns
+x[which(x > 5)] = 5
+heatmap.3(x, dendrogram='none', Rowv=FALSE, Colv=FALSE, trace='none', col = scalered, margin = c(5, 5), density.info = "none", RowSideColors = rowcols, RowSideColorsSize=2, main = "All peaks")
+legend("bottomleft", legend = c(unique(cell.info), paste0("cluster ", 1:6)), col = c(rcols1, rcols2), border=FALSE, bty="n", y.intersp = 0.7, cex=0.7, pch = 15)
+# cluster specific peaks
+x = t(InSilicoForeGround[ClusterSpecificPeaks, ])
+#truncate to see patterns
+x[which(x > 5)] = 5
+heatmap.3(x, dendrogram='none', Rowv=FALSE, Colv=FALSE, trace='none', col = scalered, margin = c(5, 5), density.info = "none", RowSideColors = rowcols, RowSideColorsSize=2, main = "Cluster specific peaks")
+legend("bottomleft", legend = c(unique(cell.info), paste0("cluster ", 1:6)), col = c(rcols1, rcols2), border=FALSE, bty="n", y.intersp = 0.7, cex=0.7, pch = 15)
+```
+
+Instead of all of the above commands to obtain the clustered and processed data, we can simply use the scABC command to do all of the above.
+
+```{r cache=TRUE}
+source("~/scRNAseqAnalysis/scATAC-RNAseq/scABC/R/scABC.R")
+library(GenomicRanges)
+library(Rsamtools)
+library(WeightedCluster)
+peakfile = "NoTreatment/6Lines/mergeAll.tn5.pf.gappedPeak"
+bamfile.table = read.table(file = "NoTreatment/6Lines/SRX&Type&Batch.txt")
+bamfiles = paste0("bams/", bamfile.table[,1], ".bam")
+InSilicoSCABC = scABC(bamfiles, peakfile)
+Cluster1Peaks = head(order(InSilicoSCABC$PeakPVals[,1], decreasing = FALSE), 400)
+Cluster2Peaks = head(order(InSilicoSCABC$PeakPVals[,2], decreasing = FALSE), 400)
+Cluster3Peaks = head(order(InSilicoSCABC$PeakPVals[,3], decreasing = FALSE), 400)
+Cluster4Peaks = head(order(InSilicoSCABC$PeakPVals[,4], decreasing = FALSE), 400)
+Cluster5Peaks = head(order(InSilicoSCABC$PeakPVals[,5], decreasing = FALSE), 400)
+Cluster6Peaks = head(order(InSilicoSCABC$PeakPVals[,6], decreasing = FALSE), 400)
+ClusterSpecificPeaksV2 = union(Cluster1Peaks, union(Cluster2Peaks, union(Cluster3Peaks, union(Cluster4Peaks, union(Cluster5Peaks, Cluster6Peaks)))))
+length(ClusterSpecificPeaks)
+intersect(ClusterSpecificPeaks, ClusterSpecificPeaksV2)
+# all peaks are cluster specific
+scalered <- colorRampPalette(c("white", "red"), space = "rgb")(256)
+rcols1 = brewer.pal(6, "Accent")[1:6]
+rowcols1 = rcols1[cell.info]
+rcols2 = brewer.pal(6, "Dark2")[1:6]
+rowcols2 = rcols2[InSilicoSCABC$LandMarkAssignments]
+rowcols = rbind(rowcols1, rowcols2)
+rownames(rowcols) = c("rep info", "cluster")
+x = t(InSilicoSCABC$ForeGroundMatrix)
+#truncate to see patterns
+x[which(x > 5)] = 5
+heatmap.3(x, dendrogram='none', Rowv=FALSE, Colv=FALSE, trace='none', col = scalered, margin = c(5, 5), density.info = "none", RowSideColors = rowcols, RowSideColorsSize=2, main = "All peaks")
+legend("bottomleft", legend = c(unique(cell.info), paste0("cluster ", 1:6)), col = c(rcols1, rcols2), border=FALSE, bty="n", y.intersp = 0.7, cex=0.7, pch = 15)
+# cluster specific peaks
+x = t(InSilicoSCABC$ForeGroundMatrix[ClusterSpecificPeaksV2, ])
+#truncate to see patterns
+x[which(x > 5)] = 5
+heatmap.3(x, dendrogram='none', Rowv=FALSE, Colv=FALSE, trace='none', col = scalered, margin = c(5, 5), density.info = "none", RowSideColors = rowcols, RowSideColorsSize=2, main = "Cluster specific peaks")
+legend("bottomleft", legend = c(unique(cell.info), paste0("cluster ", 1:6)), col = c(rcols1, rcols2), border=FALSE, bty="n", y.intersp = 0.7, cex=0.7, pch = 15)
 ```

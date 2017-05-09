@@ -45,7 +45,7 @@ get_counts_matrix <- function(bamfiles, peaks){
   counts_mat = do.call(cbind, lapply(counts_list, function(x) x$records))
   colnames(counts_mat) = sample_names
   counts_info = data.frame(chrom = counts_list[[1]]$space, start = counts_list[[1]]$start, end = counts_list[[1]]$end, name = peaks$id, pValue = peaks$pVal)
-  return(list(peaks = counts_info, ForeGround = counts_mat))
+  return(list(peaks = counts_info, ForeGroundMatrix = counts_mat))
 }
 
 #' compute_background
@@ -64,7 +64,7 @@ get_background <- function(bamfiles, peaks, upstream = 500000, downstream = 5000
   background_counts = do.call(cbind, lapply(counts_list, function(x) x$records))
   colnames(background_counts) = sample_names
   counts_info = data.frame(chrom = counts_list[[1]]$space, start = counts_list[[1]]$start, end = counts_list[[1]]$end, name = peaks$name, pValue = peaks$pValue)
-  return(list(peaks = counts_info, BackGround = background_counts))
+  return(list(peaks = counts_info, BackGroundMatrix = background_counts))
 }
 
 #' filter_background
@@ -75,9 +75,9 @@ get_background <- function(bamfiles, peaks, upstream = 500000, downstream = 5000
 #' @export filter_background
 filter_background <- function(ForeGround, BackGround, median_bg_thresh = 2){
   stopifnot(dim(ForeGround) == dim(BackGround))
-  which_samples_pass = which(apply(BackGround, 2, median) > thresh)
-  return(list(ForeGround = ForeGround[,which_samples_pass], 
-              BackGround = BackGround[,which_samples_pass]))
+  which_samples_pass = which(apply(BackGround, 2, median) > median_bg_thresh)
+  return(list(ForeGroundMatrix = ForeGround[,which_samples_pass], 
+              BackGroundMatrix = BackGround[,which_samples_pass]))
 }
 
 #' filter_peaks
@@ -88,6 +88,6 @@ filter_background <- function(ForeGround, BackGround, median_bg_thresh = 2){
 #' @export filter_peaks
 filter_peaks <- function(ForeGround, peaks, nreads_thresh = 2, ncells_thresh = 10){
   which_peaks_pass = which(rowSums(ForeGround[,4:dim(ForeGround)[2]] >= nreads_thresh) >= ncells_thresh)
-  return(list(ForeGround = ForeGround[which_peaks_pass,], peaks = peaks[which_peaks_pass, ]))
+  return(list(ForeGroundMatrix = ForeGround[which_peaks_pass,], peaks = peaks[which_peaks_pass, ]))
 }
 
