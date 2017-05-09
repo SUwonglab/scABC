@@ -1,4 +1,4 @@
-Package: ZLDa
+Package: scABC
 Type: Package
 Title: unsupervised clustering of scATAC-seq data
 Version: 0.1.0
