@@ -10,11 +10,11 @@ select_top <-function(x, n_top){
 #' @param ForeGround matrix or data frame of Foreground values
 #' @param BackGround matrix or data frame of BackGround values
 #' @param nCluster number of clusters (default = 2)
-#' @param lambda weighting parameter (default = 1)
+#' @param lambda weighting parameter (default = 0.1)
 #' @param nTop number of top clusters
 #' @import WeightedCluster 
 #' @export compute_landmarks
-compute_landmarks <- function(ForeGround, BackGround, nCluster = 2, lambda = 1, nTop = 2000){
+compute_landmarks <- function(ForeGround, BackGround, nCluster = 2, lambda = 0.1, nTop = 2000){
   # check types
   stopifnot(is.matrix(ForeGround) || is.data.frame(ForeGround))
   stopifnot(is.matrix(BackGround) || is.data.frame(BackGround))
@@ -25,9 +25,8 @@ compute_landmarks <- function(ForeGround, BackGround, nCluster = 2, lambda = 1, 
   # compute weighted k-medioids
   FGdist = 1 - cor(ForeGround, method = "spearman");
   BGmedian = apply(BackGround, 2, median);
-  q = median(BGmedian);
-  lambda = 1;
-  weights = 1/(1 + exp(-lambda*(BGmedian - q)));
+  c = min(8, median(BGmedian));
+  weights = 1/(1 + exp(-(BGmedian - c)/(c*lambda)));
   kMeds = wcKMedoids(FGdist, k = nCluster, weights = weights);
   kMedsCluster = kMeds$clustering;
   kMedsCluster = as.numeric(factor(kMedsCluster));
