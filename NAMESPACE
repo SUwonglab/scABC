@@ -2,7 +2,11 @@
 
 export(assign2landmarks)
 export(compute_landmarks)
+export(filter_background)
+export(filter_peaks)
+export(get_background)
 export(get_counts_matrix)
+export(scABC)
 export(select_peaks)
 import(GenomicRanges)
 import(Rsamtools)
