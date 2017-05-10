@@ -55,8 +55,10 @@ compute_landmarks <- function(ForeGround, BackGround, nCluster = 2, lambda = 0.1
 #' @param topLandmarks output from compute_landmarks
 #' @export assign2landmarks
 assign2landmarks <- function(ForeGround, topLandmarks){
- scor = cor(ForeGround, topLandmarks, method = "spearman")
- return(apply(scor, 1, which.max))
+  unionTopLandmarks = which(rowSums(topLandmarks)>0)
+  ## calculate Spearman correlation using only the landmark peaks
+  scor = cor(ForeGround[unionTopLandmarks,], topLandmarks[unionTopLandmarks,], method = "spearman")
+  return(apply(scor, 1, which.max))
 }
 
 #' get cluster specific pvals for peaks
@@ -83,7 +85,12 @@ getClusterSpecificPvalue <- function(ForeGround, cluster_assignments, background
   } else {
   }
   
-  ForeGround <- t(ForeGround) # make data n by p
+  ForeGround <- t(ForeGround) # make ForeGround n by p
+  
+  ## remove the background_medians=0 samples
+  ForeGround <- ForeGround[which(background_medians>0),]
+  cluster_assignments <- cluster_assignments[which(background_medians>0)]
+  background_medians <- background_medians[which(background_medians>0)]
   
   ## get beta_MLE
   if (!quiet){
