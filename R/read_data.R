@@ -67,15 +67,18 @@ get_background <- function(bamfiles, peaks, upstream = 500000, downstream = 5000
   return(list(peaks = counts_info, BackGroundMatrix = background_counts))
 }
 
-#' filter_background
-#' @param ForeGround matrix or data frame of Foreground values
+#' filter_samples
+#' @param ForeGround matrix or data frame of ForeGround values
 #' @param BackGround matrix or data frame of BackGround values
-#' @param thresh threshold of the median number of reads in background
+#' @param readsFGthresh threshold for the total reads per cell in ForeGround. Default is min(500, number of peaks/50)
 #' @return filtered ForeGround and BackGround
 #' @export filter_background
-filter_background <- function(ForeGround, BackGround, median_bg_thresh = 2){
+filter_samples <- function(ForeGround, BackGround, readsFGthresh=NULL){
   stopifnot(dim(ForeGround) == dim(BackGround))
-  which_samples_pass = which(apply(BackGround, 2, median) > median_bg_thresh)
+  if (is.null(readsFGthresh)){
+    readsFGthresh <- min(500, nrow(ForeGround)/50)  
+  } 
+  which_samples_pass = which(colSums(ForeGround) > readsFGthresh) 
   return(list(ForeGroundMatrix = ForeGround[,which_samples_pass], 
               BackGroundMatrix = BackGround[,which_samples_pass]))
 }
