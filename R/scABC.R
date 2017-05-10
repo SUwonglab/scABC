@@ -16,7 +16,7 @@
 #' @export
 scABC <- function(bamfiles, peakfile, PLOT = TRUE, QUIET = TRUE,
                   nClusters = c(), pValThresh = 2, 
-                  nreadsThresh = 2, ncellsThresh = 10, medianBGthresh = 2, 
+                  nreadsThresh = 2, ncellsThresh = 10, readsFGthresh = NULL, 
                   lambda = 1, nTop = 2000, nPerm = 20, 
                   maxiter=1000, thresMLE=10^-3, thresMAP=10^-5){
   peaks = select_peaks(peakfile,thresh = pValThresh)
@@ -28,9 +28,9 @@ scABC <- function(bamfiles, peakfile, PLOT = TRUE, QUIET = TRUE,
   peaks = ForeGroundFiltered$peaks
   if(!QUIET){cat("\nreading in background\n")}
   BackGround = get_background(bamfiles, peaks)
-  ForeGroundBackGroundFiltered = filter_background(ForeGround = ForeGroundFiltered$ForeGroundMatrix, 
+  ForeGroundBackGroundFiltered = filter_samples(ForeGround = ForeGroundFiltered$ForeGroundMatrix, 
                                                    BackGround = BackGround$BackGroundMatrix, 
-                                                   median_bg_thresh = medianBGthresh)
+                                                   readsFGthresh = readsFGthresh)
   ForeGroundMatrix = ForeGroundBackGroundFiltered$ForeGroundMatrix
   BackGroundMatrix = ForeGroundBackGroundFiltered$BackGroundMatrix
   BackGroundMedian = apply(BackGroundMatrix, 2, median)
