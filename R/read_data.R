@@ -72,7 +72,7 @@ get_background <- function(bamfiles, peaks, upstream = 500000, downstream = 5000
 #' @param BackGround matrix or data frame of BackGround values
 #' @param readsFGthresh threshold for the total reads per cell in ForeGround. Default is min(500, number of peaks/50)
 #' @return filtered ForeGround and BackGround
-#' @export filter_background
+#' @export filter_samples
 filter_samples <- function(ForeGround, BackGround, readsFGthresh=NULL){
   stopifnot(dim(ForeGround) == dim(BackGround))
   if (is.null(readsFGthresh)){
