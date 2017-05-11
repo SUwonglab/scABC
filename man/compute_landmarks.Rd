@@ -4,7 +4,7 @@
 \alias{compute_landmarks}
 \title{compute landmarks}
 \usage{
-compute_landmarks(ForeGround, BackGround, nCluster = 2, lambda = 1,
+compute_landmarks(ForeGround, BackGround, nCluster = 2, lambda = 0.1,
   nTop = 2000)
 }
 \arguments{
@@ -14,7 +14,7 @@ compute_landmarks(ForeGround, BackGround, nCluster = 2, lambda = 1,
 
 \item{nCluster}{number of clusters (default = 2)}
 
-\item{lambda}{weighting parameter (default = 1)}
+\item{lambda}{weighting parameter (default = 0.1)}
 
 \item{nTop}{number of top clusters}
 }

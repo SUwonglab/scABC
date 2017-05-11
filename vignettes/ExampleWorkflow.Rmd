@@ -29,41 +29,38 @@ Several of the cells have multiple runs.  We merged these runs using samtools.
 ## Obtaining and filtering counts
 
 We will use scABC to analyse the single cell data.  The cell level bam files and their samtools indexes are contained in the folder bams.
-```{r eval=FALSE}
+```{r cache=TRUE}
 setwd("~/scRNAseqAnalysis/scATAC-RNAseq/scABC/vignettes/")
-source("~/scRNAseqAnalysis/scATAC-RNAseq/scABC/R/read_data.R")
-library(GenomicRanges)
-library(Rsamtools)
+library(devtools)
+devtools::install_github("timydaley/scABC")
+library(scABC)
 bamfile.table = read.table(file = "NoTreatment/6Lines/SRX&Type&Batch.txt")
 head(bamfile.table)
 bamfiles = paste0("bams/", bamfile.table[,1], ".bam")
 peaks = select_peaks("NoTreatment/6Lines/mergeAll.tn5.pf.gappedPeak")
 dim(peaks)
+```
+
+```{r cache=TRUE}
 ForeGround = get_counts_matrix(bamfiles, peaks)
+```
+
+```{r cache=TRUE}
 ForeGroundFiltered = filter_peaks(ForeGround$ForeGround, ForeGround$peaks)
 peaks = ForeGroundFiltered$peaks
+```
+
+```{r cache=TRUE}
 BackGround = get_background(bamfiles, ForeGroundFiltered$peaks)
-ForeGroundBackGroundFiltered = filter_background(ForeGround = ForeGroundFiltered$ForeGround, BackGround = BackGround$BackGround)
+ForeGroundBackGroundFiltered = filter_samples(ForeGround = ForeGroundFiltered$ForeGround, BackGround = BackGround$BackGround)
 InSilicoForeGround = ForeGroundBackGroundFiltered$ForeGround
 InSilicoBackGround = ForeGroundBackGroundFiltered$BackGround
 InSilicoPeaks = peaks
-```
-```{r echo=FALSE, cache=TRUE}
-InSilicoForeGround = read.table(file = "NoTreatment/6Lines/InSilicoForeGround.txt", header = TRUE)
-InSilicoBackGround = read.table(file = "NoTreatment/6Lines/InSilicoBackGround.txt", header = TRUE)
-InSilicoPeaks = read.table(file = "NoTreatment/6Lines/InSilicoPeaks.txt", header = TRUE)
-bamfile.table = read.table(file = "NoTreatment/6Lines/SRX&Type&Batch.txt")
 ```
 
 Now let's compute the landmarks and take a look at them.
 
 ```{r message=FALSE, cache=TRUE}
-setwd("~/scRNAseqAnalysis/scATAC-RNAseq/scABC/vignettes/")
-source("~/scRNAseqAnalysis/scATAC-RNAseq/scABC/R/read_data.R")
-source("~/scRNAseqAnalysis/scATAC-RNAseq/scABC/R/cluster.R")
-library(GenomicRanges)
-library(Rsamtools)
-library(WeightedCluster)
 InSilicoLandMarks = compute_landmarks(ForeGround = InSilicoForeGround, 
                                       BackGround = InSilicoBackGround, 
                                       nCluster = 6, lambda = 1, nTop = 2000)
@@ -75,7 +72,7 @@ It looks like the cluster landmarks are well seperated.  Let's look at the cell 
 
 ```{r cache=TRUE}
 # assign cells to the closest landmark
-InSilicoLandMarkAssignments = assign2landmarks(ForeGround = InSilicoForeGround, InSilicoLandMarks)
+InSilicoLandMarkAssignments = assign2landmarks(InSilicoForeGround, InSilicoLandMarks)
 InSilicoCell2LandmarkCorrelation = cbind(apply(InSilicoForeGround, 2, function(x) cor(x, InSilicoLandMarks[,1], method = 'spearman')), 
                                          apply(InSilicoForeGround, 2, function(x) cor(x, InSilicoLandMarks[,2], method = 'spearman')), 
                                          apply(InSilicoForeGround, 2, function(x) cor(x, InSilicoLandMarks[,3], method = 'spearman')), 
@@ -110,14 +107,14 @@ plotGapStat(InSilicoGapStat, nClusters = 1:20, main = "In Silico Gap Stat")
 scABC chooses 6 clusters and we can continue with this number of clusters.
 
 ```{r cache=TRUE}
-InSilicoPeakSelection = getClusterSpecificPvalue(ForeGround=InSilicoForeGround, cluster_assignments = InSilicoLandMarkAssignments, background_medians = InSilicoBackGroundMedian, landmark = InSilicoLandMarks)
+InSilicoPeakSelection = getClusterSpecificPvalue(ForeGroundMatrix=InSilicoForeGround, cluster_assignments = InSilicoLandMarkAssignments, background_medians = InSilicoBackGroundMedian, landmark = InSilicoLandMarks)
 head(InSilicoPeakSelection$pvalue)
 dim(InSilicoPeakSelection$pvalue)
 ```
 
 Note that peaks that don't belong to a landmark then the p-value is NA.  Let's restrict all peaks to peaks with $p$-values.
 
-```{r}
+```{r cache=TRUE}
 which_peaks = which(!is.na(InSilicoPeakSelection$pvalue[,1]))
 InSilicoForeGround = InSilicoForeGround[which_peaks, ]
 InSilicoPeaks = InSilicoPeaks[which_peaks, ]

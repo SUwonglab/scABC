@@ -6,7 +6,7 @@
 \usage{
 scABC(bamfiles, peakfile, PLOT = TRUE, QUIET = TRUE, nClusters = c(),
   pValThresh = 2, nreadsThresh = 2, ncellsThresh = 10,
-  medianBGthresh = 2, lambda = 1, nTop = 2000, nPerm = 20,
+  readsFGthresh = NULL, lambda = 1, nTop = 2000, nPerm = 20,
   maxiter = 1000, thresMLE = 10^-3, thresMAP = 10^-5)
 }
 \arguments{
