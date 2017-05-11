@@ -80,6 +80,8 @@ InSilicoCell2LandmarkCorrelation = cbind(apply(InSilicoForeGround, 2, function(x
                                          apply(InSilicoForeGround, 2, function(x) cor(x, InSilicoLandMarks[,4], method = 'spearman')), 
                                          apply(InSilicoForeGround, 2, function(x) cor(x, InSilicoLandMarks[,5], method = 'spearman')), 
                                          apply(InSilicoForeGround, 2, function(x) cor(x, InSilicoLandMarks[,6], method = 'spearman')))
+head(InSilicoCell2LandmarkCorrelation, 10)
+range(InSilicoCell2LandmarkCorrelation)
 cell.info = bamfile.table[which(paste0(bamfile.table[,1], ".bam") %in% colnames(InSilicoForeGround)), 2]
 library(gplots) 
 library(RColorBrewer)
@@ -92,8 +94,10 @@ rcols2 = brewer.pal(6, "Dark2")[1:6]
 rowcols2 = rcols2[InSilicoLandMarkAssignments]
 rowcols = rbind(rowcols1, rowcols2)
 rownames(rowcols) = c("rep info", "cluster")
-heatmap.3(InSilicoCell2LandmarkCorrelation, dendrogram='none', Rowv=FALSE, Colv=FALSE, trace='none', col = scalered, margin = c(5, 5), density.info = "none", RowSideColors = rowcols, RowSideColorsSize=2)
+heatmap.3(InSilicoCell2LandmarkCorrelation, dendrogram='none', Rowv=FALSE, Colv=FALSE, trace='none', col = scalered, margin = c(5, 5), density.info = "none", RowSideColors = rowcols, RowSideColorsSize=2, symm=F,symkey=F,symbreaks=F, scale="none")
 legend("bottomleft", legend = c(unique(cell.info), paste0("cluster ", 1:6)), col = c(rcols1, rcols2), border=FALSE, bty="n", y.intersp = 0.7, cex=0.7, pch = 15)
+heatmap.2(InSilicoCell2LandmarkCorrelation, dendrogram='none', Rowv=FALSE, Colv=FALSE, trace='none', col = scalered, margin = c(5, 5), density.info = "none", RowSideColors = rowcols1, symm=F,symkey=F,symbreaks=F, scale="none")
+legend("bottomleft", legend = c(unique(cell.info)), col = rcols1, border=FALSE, bty="n", y.intersp = 0.7, cex=0.7, pch = 15)
 ```
 
 The clustering correctly classifies all cells except for 1.  This assumes we knew the number of clusters.  What if we let scABC choose the number of clusters?
@@ -101,16 +105,15 @@ The clustering correctly classifies all cells except for 1.  This assumes we kne
 ```{r message=FALSE, cache=TRUE}
 devtools::install_github("timydaley/scABC", force = TRUE)
 library(scABC)
-# compute cell-level background median
 InSilicoBackGroundMedian = apply(InSilicoBackGround, 2, median)
-InSilicoGapStat = getGapStat(InSilicoForeGround, InSilicoBackGroundMedian, nClusters=1:20, quiet = TRUE)
+InSilicoGapStat = getGapStat(InSilicoForeGround, InSilicoBackGroundMedian, nClusters=1:20, nPerm = 20, quiet = TRUE)
 plotGapStat(InSilicoGapStat, nClusters = 1:20, main = "In Silico Gap Stat")
 ```
 
 scABC chooses 6 clusters and we can continue with this number of clusters.
 
 ```{r cache=TRUE}
-InSilicoPeakSelection = getClusterSpecificPvalue(ForeGroundMatrix=InSilicoForeGround, cluster_assignments = InSilicoLandMarkAssignments, background_medians = InSilicoBackGroundMedian, landmark = InSilicoLandMarks)
+InSilicoPeakSelection = getClusterSpecificPvalue(ForeGround=InSilicoForeGround, cluster_assignments = InSilicoLandMarkAssignments, background_medians = InSilicoBackGroundMedian, landmark = InSilicoLandMarks)
 head(InSilicoPeakSelection$pvalue)
 dim(InSilicoPeakSelection$pvalue)
 ```
@@ -159,7 +162,7 @@ legend("bottomleft", legend = c(unique(cell.info), paste0("cluster ", 1:6)), col
 
 Instead of all of the above commands to obtain the clustered and processed data, we can simply use the scABC command to do all of the above.
 
-```{r cache=TRUE}
+```{r cache=TRUE, eval=FALSE}
 source("~/scRNAseqAnalysis/scATAC-RNAseq/scABC/R/scABC.R")
 library(GenomicRanges)
 library(Rsamtools)

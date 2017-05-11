@@ -61,17 +61,21 @@ assign2landmarks <- function(ForeGround, topLandmarks){
   return(apply(scor, 1, which.max))
 }
 
-#' get cluster specific pvals for peaks
+#' getClusterSpecificPvalue
 #' 
-#' @docType package
-#' @name getClusterSpecificPvalue
-#' @param data matrix of peaks by cells counts
-#' @param cluster matrix of cluster indicator membership 
-#' @param background_median median background values for each cell
+#' @param ForeGround matrix of peaks by cells counts
+#' @param cluster_assignments matrix of cluster indicator membership 
+#' @param background_medians median background values for each cell
 #' @param landmark optional. If landmark is provided, we only do hypothesis testing on the union of landmark peaks
+#' @param maxiter maximum number of iterations, default: 1000
+#' @param thresMLE numerical threshhold for convergence of MLE, default: 10^-3
+#' @param thresMAP numerical threshhold for convergence of MAP, default: 10^-5
+#' @param quiet boolean variable indicating whether to print error statements or not, default: FALSE
+#' @return list of estimated betas and their standard deviations (sigma), and the p-values testing whether each peak is specific to each cluster
+#' @export getClusterSpecificPvalue
 getClusterSpecificPvalue <- function(ForeGround, cluster_assignments, background_medians, 
-                                     landmark=NULL, maxiter=1000, thresMLE=10^-3, 
-                                     thresMAP=10^-5, quiet=TRUE){
+                                     landmark=NULL, maxiter=1000, threshMLE=10^-3, 
+                                     thresMAP=10^-5, quiet=FALSE){
   ## the main function for peak selection
   ## data is nPeaks(p) by Cells(n)
   ## cluster_assignments is the cluster membership matrix, length n. Take entries 1 to nCluster
@@ -311,10 +315,16 @@ getContrast <- function(nCluster){
   return(list(constrasts=constrasts, constrastsCluster=constrastsCluster))
 }
 
-
-
+#' getGapStat
+#' @param ForeGround matrix or data frame of ForeGround values
+#' @param BackGround matrix or data frame of BackGround values
+#' @param nClusters vector of clusters to try, default: 1:10
+#' @param nPerm number of permutation to perform, default: 10
+#' @param nTop the number of top features to use in the clustering
+#' @return list of gap stat stuff 
+#' @export getGapStat
 getGapStat <- function(ForeGround, BackGroundMedian, nClusters=1:10, 
-                       nPerm=10, nTop = 10000, quiet=FALSE){
+                       nPerm=20, nTop = 10000, quiet=FALSE){
   ## sort nClusters from small to large
   nClusters <- sort(nClusters, decreasing=FALSE)
   
@@ -408,6 +418,12 @@ getGapStat <- function(ForeGround, BackGroundMedian, nClusters=1:10,
   return(list(ObjData=ObjData_nClusters, ObjPerm=ObjPerm_nClusters, nClusterOptimal=nClusterOptimal))
 }
 
+#' plotGapStat
+#' @param GapStat output of getGapStat
+#' @param nClusters vector of clusters to try, default: 1:10
+#' @param main title of plot
+#' @return nothing, just plotting 
+#' @export plotGapStat
 plotGapStat <- function(GapStat, nClusters, main, fold=1, cex=0.3, lty=2){
   ObjPerm <- GapStat$ObjPerm
   ObjData <- GapStat$ObjData
