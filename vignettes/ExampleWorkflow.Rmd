@@ -29,11 +29,12 @@ Several of the cells have multiple runs.  We merged these runs using samtools.
 ## Obtaining and filtering counts
 
 We will use scABC to analyse the single cell data.  The cell level bam files and their samtools indexes are contained in the folder bams.
-```{r cache=TRUE}
+```{r}
 setwd("~/scRNAseqAnalysis/scATAC-RNAseq/scABC/vignettes/")
 library(devtools)
 devtools::install_github("timydaley/scABC")
 library(scABC)
+# table that has experiment info
 bamfile.table = read.table(file = "NoTreatment/6Lines/SRX&Type&Batch.txt")
 head(bamfile.table)
 bamfiles = paste0("bams/", bamfile.table[,1], ".bam")
@@ -98,6 +99,8 @@ legend("bottomleft", legend = c(unique(cell.info), paste0("cluster ", 1:6)), col
 The clustering correctly classifies all cells except for 1.  This assumes we knew the number of clusters.  What if we let scABC choose the number of clusters?
 
 ```{r message=FALSE, cache=TRUE}
+devtools::install_github("timydaley/scABC", force = TRUE)
+library(scABC)
 # compute cell-level background median
 InSilicoBackGroundMedian = apply(InSilicoBackGround, 2, median)
 InSilicoGapStat = getGapStat(InSilicoForeGround, InSilicoBackGroundMedian, nClusters=1:20, quiet = TRUE)
