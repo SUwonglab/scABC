@@ -324,13 +324,13 @@ getContrast <- function(nCluster){
 #' @return list of gap stat stuff 
 #' @export getGapStat
 getGapStat <- function(ForeGround, BackGroundMedian, nClusters=1:10, 
-                       nPerm=20, nTop = 10000, quiet=FALSE){
+                       nPerm=20, nTop = 5000, quiet=FALSE){
   ## sort nClusters from small to large
   nClusters <- sort(nClusters, decreasing=FALSE)
   
   ##
   lambda <- 0.1
-  c <- quantile(BackGroundMedian, 0.5)
+  c <- min(8, quantile(BackGroundMedian, 0.5))
   W <- 1/(1+exp(-(BackGroundMedian-c)/(lambda*c)))
   distS <- 1-cor(ForeGround[head(order(apply(ForeGround, 1, sum), decreasing = TRUE), nTop), ], 
                  method="spearman")
