@@ -332,8 +332,8 @@ getGapStat <- function(ForeGround, BackGroundMedian, nClusters=1:10,
   lambda <- 0.1
   c <- min(8, quantile(BackGroundMedian, 0.5))
   W <- 1/(1+exp(-(BackGroundMedian-c)/(lambda*c)))
-  distS <- 1-cor(ForeGround[head(order(apply(ForeGround, 1, sum), decreasing = TRUE), nTop), ], 
-                 method="spearman")
+  top_features = head(order(apply(ForeGround, 1, sum), decreasing = TRUE), nTop)
+  distS <- 1-cor(ForeGround[top_features,], method="spearman")
   
   ## function for calculating the objective
   calObj <- function(cluster, distMatrix, weight, nTop){
@@ -379,7 +379,7 @@ getGapStat <- function(ForeGround, BackGroundMedian, nClusters=1:10,
   
   ObjPerm_nClusters <- matrix(nrow=nPerm, ncol=length(nClusters))
   for (perm in 1:nPerm){
-    ForeGroundPerm <- t(apply(ForeGround, 1, sample))
+    ForeGroundPerm <- t(apply(ForeGround[top_features, ], 1, sample))
     distP <- 1-cor(ForeGroundPerm, method="spearman")
     ObjPA <- c()
     count <- 0
