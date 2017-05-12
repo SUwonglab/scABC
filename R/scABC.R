@@ -3,8 +3,20 @@
 #'         Mahdi Zamanighomi \email{mzamani@stanford.edu}
 #' @param bamfiles location of bam files
 #' @param peakfile location of peak file
-#' @param plot boolean variable to make plots
+#' @param PLOT boolean variable to make plots, default: TRUE
+#' @param QUIET boolean variable for verbosity, default: TRUE
 #' @param nClusters number of clusters, if not set manually then the number of clusters is determined by gap stat analysis
+#' @param pValThresh the -log10(p) threshhold on the MACS2 computed peak p value, default: 2 (p < 0.01)
+#' @param nreadsThresh threshold on the minimum number of reads in ncellsThresh to require when filtering cells, default: 2
+#' @param ncellsThresh threshold on the minimum number of cells with nreadsThresh to require when filtering cell, default: 10
+#' @param readsFGthresh threshold on the number of reads falling in peaks to filter cells by, default: min(500, nrow(ForeGround)/50)
+#' @param lambda weighting parameter for clustering
+#' @param nTop the number of top peaks to use when forming the landmarks
+#' @param nPerm the number of permutation to use when selecting peaks by the gap statistic
+#' @param maxiter maximum number of iterations when computing beta, default: 1000
+#' @param thresMLE numerical threshhold for convergence of beta MLE, default: 10^-3
+#' @param thresMAP numerical threshhold for convergence of MAP, default: 10^-5
+#' @return a list of the processed ForeGround, peaks, number of clusters, cluster assignments, landmarks, and peak p values
 #' @import WeightedCluster 
 #' @import Rsamtools
 #' @import GenomicRanges
