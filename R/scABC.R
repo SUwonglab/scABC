@@ -10,9 +10,10 @@
 #' @param nreadsThresh threshold on the minimum number of reads in ncellsThresh to require when filtering cells, default: 2
 #' @param ncellsThresh threshold on the minimum number of cells with nreadsThresh to require when filtering cell, default: 10
 #' @param readsFGthresh threshold on the number of reads falling in peaks to filter cells by, default: min(500, nrow(ForeGround)/50)
-#' @param lambda weighting parameter for clustering
-#' @param nTop the number of top peaks to use when forming the landmarks
-#' @param nPerm the number of permutation to use when selecting peaks by the gap statistic
+#' @param lambda weighting parameter for clustering, default: 1
+#' @param nTop the number of top peaks to use when forming the landmarks for each cluster, default: 2000
+#' @param nPerm the number of permutation to use when selecting peaks by the gap statistic, default: 20
+#' @param nTopGapStat the number of top peaks to use when computing the gap statistic, default: 5000
 #' @param maxiter maximum number of iterations when computing beta, default: 1000
 #' @param thresMLE numerical threshhold for convergence of beta MLE, default: 10^-3
 #' @param thresMAP numerical threshhold for convergence of MAP, default: 10^-5
@@ -29,7 +30,7 @@
 scABC <- function(bamfiles, peakfile, PLOT = TRUE, QUIET = TRUE,
                   nClusters = c(), pValThresh = 2, 
                   nreadsThresh = 2, ncellsThresh = 10, readsFGthresh = NULL, 
-                  lambda = 1, nTop = 2000, nPerm = 20, 
+                  lambda = 1, nTop = 2000, nPerm = 20, nTopGapStat = 5000, 
                   maxiter=1000, thresMLE=10^-3, thresMAP=10^-5){
   peaks = select_peaks(peakfile,thresh = pValThresh)
   if(!QUIET){cat("\nreading in foreground\n")}
@@ -54,7 +55,8 @@ scABC <- function(bamfiles, peakfile, PLOT = TRUE, QUIET = TRUE,
   }
   else if(length(nClusters) > 1){
     GapStat = getGapStat(ForeGroundMatrix, BackGroundMedian, 
-                         nClusters=nClusters, nPerm=nPerm, quiet=QUIET)
+                         nClusters=nClusters, nPerm=nPerm, 
+                         nTop = nTopGapStat, quiet=QUIET)
     if(PLOT){
       plotGapStat(GapStat, nClusters=nClusters, main = "Gap Stat")
     }
@@ -67,7 +69,8 @@ scABC <- function(bamfiles, peakfile, PLOT = TRUE, QUIET = TRUE,
   else {
     nClusters = 1:10
     GapStat = getGapStat(ForeGroundMatrix, BackGroundMedian, 
-                         nClusters = nClusters, nPerm=nPerm, quiet = QUIET)
+                         nClusters = nClusters, nPerm=nPerm, 
+                         nTop = nTopGapStat, quiet = QUIET)
     if(PLOT){
       plotGapStat(GapStat, nClusters=nClusters, main = "Gap Stat")
     }
