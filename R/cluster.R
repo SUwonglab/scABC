@@ -74,7 +74,7 @@ assign2landmarks <- function(ForeGround, topLandmarks){
 #' @return list of estimated betas and their standard deviations (sigma), and the p-values testing whether each peak is specific to each cluster
 #' @export getClusterSpecificPvalue
 getClusterSpecificPvalue <- function(ForeGround, cluster_assignments, background_medians, 
-                                     landmark=NULL, maxiter=1000, threshMLE=10^-3, 
+                                     landmark=NULL, maxiter=1000, thresMLE=10^-3, 
                                      thresMAP=10^-5, quiet=FALSE){
   ## the main function for peak selection
   ## data is nPeaks(p) by Cells(n)
