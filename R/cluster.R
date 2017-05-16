@@ -170,7 +170,7 @@ getbetaMLE <- function(data, cluster, background_medians,
     if (!quiet){
       cat("\r", round(percConverged[length(percConverged)]*100), "%", "converged")  
     }
-    if (percConverged[length(percConverged)]==1){
+    if (length(percConverged) > 0 & percConverged[length(percConverged)]==1){
       converged <- 1
     }
     iter <- iter + 1
@@ -249,7 +249,7 @@ getbetaMAP <- function(data, cluster, background_medians, sigmas, beta_ini, maxi
       cat("\r", round(percConverged[length(percConverged)]*100), "%", "converged")  
     }
     
-    if (percConverged[length(percConverged)]==1){
+    if (length(percConverged) > 0 & percConverged[length(percConverged)]==1){
       converged <- 1
     }
     iter <- iter + 1
