@@ -82,7 +82,7 @@ scABC <- function(bamfiles, peakfile, PLOT = TRUE, QUIET = TRUE,
   }
   LandMarkAssignments = assign2landmarks(ForeGround = ForeGroundMatrix, LandMarks)
   PeakPvals = getClusterSpecificPvalue(ForeGround = ForeGroundMatrix, cluster = LandMarkAssignments, 
-                                       background_medians = BackGroundMedian, landmark=LandMarks, 
+                                       background_medians = BackGroundMedian, 
                                        maxiter=maxiter, thresMLE=thresMLE, thresMAP=10^-5, 
                                        quiet=QUIET)
   which_peaks = which(!is.na(PeakPvals$pvalue[,1]))
