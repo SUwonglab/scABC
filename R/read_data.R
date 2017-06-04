@@ -85,6 +85,7 @@ filter_samples <- function(ForeGround, BackGround, readsFGthresh=NULL){
 
 #' filter_peaks
 #' @param ForeGround matrix or data frame of Foreground values
+#' @param peaks a bed format file of peaks
 #' @param nreads_thresh threshold of the number of reads
 #' @param ncells_thresh threshold of the number of cells
 #' @return filtered ForeGround and peaks
