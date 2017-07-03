@@ -8,8 +8,8 @@ Author: as.person(c(“Mahdi Zamanighomi <mzamani@stanford.edu> [cre]”,
 Maintainer: Timothy Daley <tdaley@stanford.edu> and Zhixiang Lin <zl235@stanford.edu>
 Description: A package for unsupervised clustering of single cell ATAC-seq
     data to identify cells with common epigenetic patterns at the single cell level.
-Depends: R(>= 3.3.2),
-         GenomicRanges,
+Depends: R(>= 3.3.0)
+Imports: GenomicRanges,
          Rsamtools,
          WeightedCluster
 License: GPL-3
