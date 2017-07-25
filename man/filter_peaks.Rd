@@ -9,6 +9,8 @@ filter_peaks(ForeGround, peaks, nreads_thresh = 2, ncells_thresh = 10)
 \arguments{
 \item{ForeGround}{matrix or data frame of Foreground values}
 
+\item{peaks}{a bed format file of peaks}
+
 \item{nreads_thresh}{threshold of the number of reads}
 
 \item{ncells_thresh}{threshold of the number of cells}

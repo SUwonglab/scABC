@@ -5,25 +5,25 @@
 \title{getClusterSpecificPvalue}
 \usage{
 getClusterSpecificPvalue(ForeGround, cluster_assignments, background_medians,
-  landmark = NULL, maxiter = 1000, threshMLE = 10^-3, thresMAP = 10^-5,
+  landmark = NULL, maxiter = 1000, thresMLE = 10^-3, thresMAP = 10^-5,
   quiet = FALSE)
 }
 \arguments{
+\item{ForeGround}{matrix of peaks by cells counts}
+
+\item{cluster_assignments}{matrix of cluster indicator membership}
+
+\item{background_medians}{median background values for each cell}
+
 \item{landmark}{optional. If landmark is provided, we only do hypothesis testing on the union of landmark peaks}
 
 \item{maxiter}{maximum number of iterations, default: 1000}
 
+\item{thresMLE}{numerical threshhold for convergence of MLE, default: 10^-3}
+
 \item{thresMAP}{numerical threshhold for convergence of MAP, default: 10^-5}
 
 \item{quiet}{boolean variable indicating whether to print error statements or not, default: FALSE}
-
-\item{data}{matrix of peaks by cells counts}
-
-\item{cluster}{matrix of cluster indicator membership}
-
-\item{background_median}{median background values for each cell}
-
-\item{thresMLE}{numerical threshhold for convergence of MLE, default: 10^-3}
 }
 \value{
 list of estimated betas and their standard deviations (sigma), and the p-values testing whether each peak is specific to each cluster

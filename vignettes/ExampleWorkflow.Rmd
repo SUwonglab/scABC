@@ -249,3 +249,9 @@ heatmap.3(x, dendrogram='none', Rowv=FALSE, Colv=as.dendrogram(col.clus),
 legend("bottomleft", legend = c(unique(cell.info), paste0("cluster ", 1:6)), 
        col = c(rcols1, rcols2), border=FALSE, bty="n", y.intersp = 0.7, cex=0.7, pch = 15)
 ```
+
+# Session Info
+
+```{r}
+sessionInfo()
+```

@@ -7,25 +7,50 @@
 scABC(bamfiles, peakfile, PLOT = TRUE, QUIET = TRUE, nClusters = c(),
   pValThresh = 2, nreadsThresh = 2, ncellsThresh = 10,
   readsFGthresh = NULL, lambda = 1, nTop = 2000, nPerm = 20,
-  maxiter = 1000, thresMLE = 10^-3, thresMAP = 10^-5)
+  nTopGapStat = 5000, maxiter = 1000, thresMLE = 10^-3,
+  thresMAP = 10^-5)
 }
 \arguments{
 \item{bamfiles}{location of bam files}
 
 \item{peakfile}{location of peak file}
 
+\item{PLOT}{boolean variable to make plots, default: TRUE}
+
+\item{QUIET}{boolean variable for verbosity, default: TRUE}
+
 \item{nClusters}{number of clusters, if not set manually then the number of clusters is determined by gap stat analysis}
 
-\item{plot}{boolean variable to make plots}
+\item{pValThresh}{the -log10(p) threshhold on the MACS2 computed peak p value, default: 2 (p < 0.01)}
+
+\item{nreadsThresh}{threshold on the minimum number of reads in ncellsThresh to require when filtering cells, default: 2}
+
+\item{ncellsThresh}{threshold on the minimum number of cells with nreadsThresh to require when filtering cell, default: 10}
+
+\item{readsFGthresh}{threshold on the number of reads falling in peaks to filter cells by, default: min(500, nrow(ForeGround)/50)}
+
+\item{lambda}{weighting parameter for clustering, default: 1}
+
+\item{nTop}{the number of top peaks to use when forming the landmarks for each cluster, default: 2000}
+
+\item{nPerm}{the number of permutation to use when selecting peaks by the gap statistic, default: 20}
+
+\item{nTopGapStat}{the number of top peaks to use when computing the gap statistic, default: 5000}
+
+\item{maxiter}{maximum number of iterations when computing beta, default: 1000}
+
+\item{thresMLE}{numerical threshhold for convergence of beta MLE, default: 10^-3}
+
+\item{thresMAP}{numerical threshhold for convergence of MAP, default: 10^-5}
+}
+\value{
+a list of the processed ForeGround, peaks, number of clusters, cluster assignments, landmarks, and peak p values
 }
 \description{
 scABC
 }
 \examples{
-bamfiles and peakfile contain the location of the bams and peaks (in bed format)
-         scABCcluster = scABC(bamfiles, peakfile, nClusters = 1:5) chooses the optimal 
-         cluster from 1 to 5 and returns the filtered data and peak along with cluster
-         assignments, representative landmarks, and peak p-values
+scABCcluster = scABC(bamfiles, peakfile, nClusters = 1:5) 
 }
 \author{
 Timothy Daley \email{tdaley@stanford.edu}, Zhixiang Lin \email{zl235@stanford.edu},

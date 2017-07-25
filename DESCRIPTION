@@ -1,7 +1,7 @@
 Package: scABC
 Type: Package
 Title: unsupervised clustering of scATAC-seq data
-Version: 0.1.0
+Version: 0.99.0
 Author: as.person(c(“Mahdi Zamanighomi <mzamani@stanford.edu> [cre]”,
                     “Zhixiang Lin <zl235@stanford.edu> [aut, cre]”,
                     “Timothy Daley <tdaley@stanford.edu> [aut, cre]”))

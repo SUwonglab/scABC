@@ -4,8 +4,8 @@
 \alias{getGapStat}
 \title{getGapStat}
 \usage{
-getGapStat(ForeGround, BackGroundMedian, nClusters = 1:10, nPerm = 10,
-  nTop = 10000, quiet = FALSE)
+getGapStat(ForeGround, BackGroundMedian, nClusters = 1:10, nPerm = 20,
+  nTop = 5000, quiet = FALSE)
 }
 \arguments{
 \item{ForeGround}{matrix or data frame of ForeGround values}
