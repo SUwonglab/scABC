@@ -7,7 +7,7 @@ sort_peaks <- function(peaks){
 #' @return significant peaks obtained by filtering by p-value
 #' @keywords peaks
 #' @export select_peaks
-select_peaks <- function(filename, thresh = 2){
+selectPeaks <- function(filename, thresh = 2){
   column_names = c("chrom", "start", "end", "name", "score", "strand",
                    "thickStart", "thickEnd", "itemRgb", "blockCount", "blockSizes",
                    "blockStarts", "signalValue", "pValue", "qValue");
@@ -38,12 +38,13 @@ get_counts_from_bam <- function(bamfile, peaks){
 #' @keywords peaks
 #' @keywords counts
 #' @export get_counts_matrix
-get_counts_matrix <- function(bamfiles, peaks){
+getCountsMatrix <- function(bamfiles, peaks){
   peaks = peaks2GRanges(peaks)
   counts_list = lapply(bamfiles, function(x) get_counts_from_bam(x, peaks))
   sample_names = c(do.call(rbind, lapply(counts_list, function(x) head(toString(x$file[1])))))
   counts_mat = do.call(cbind, lapply(counts_list, function(x) x$records))
   colnames(counts_mat) = sample_names
+  rownames(counts_mat) = elementMetadata(peaksGR)[,1]
   counts_info = data.frame(chrom = counts_list[[1]]$space, start = counts_list[[1]]$start, end = counts_list[[1]]$end, name = peaks$id, pValue = peaks$pVal)
   return(list(peaks = counts_info, ForeGroundMatrix = counts_mat))
 }
@@ -57,12 +58,13 @@ get_counts_matrix <- function(bamfiles, peaks){
 #' @import Rsamtools
 #' @import GenomicRanges
 #' @export get_background
-get_background <- function(bamfiles, peaks, upstream = 500000, downstream = 500000){
+getBackground <- function(bamfiles, peaks, upstream = 500000, downstream = 500000){
   background_peaks = peaks2GRanges(peaks, upstream, downstream)
   counts_list = lapply(bamfiles, function(x) get_counts_from_bam(x, background_peaks))
   sample_names = c(do.call(rbind, lapply(counts_list, function(x) head(toString(x$file[1])))))
   background_counts = do.call(cbind, lapply(counts_list, function(x) x$records))
   colnames(background_counts) = sample_names
+  rownames(background_counts) = peaks$name
   counts_info = data.frame(chrom = counts_list[[1]]$space, start = counts_list[[1]]$start, end = counts_list[[1]]$end, name = peaks$name, pValue = peaks$pValue)
   return(list(peaks = counts_info, BackGroundMatrix = background_counts))
 }
@@ -73,7 +75,7 @@ get_background <- function(bamfiles, peaks, upstream = 500000, downstream = 5000
 #' @param readsFGthresh threshold for the total reads per cell in ForeGround. Default is min(500, number of peaks/50)
 #' @return filtered ForeGround and BackGround
 #' @export filter_samples
-filter_samples <- function(ForeGround, BackGround, readsFGthresh=NULL){
+filterSamples <- function(ForeGround, BackGround, readsFGthresh=NULL){
   stopifnot(dim(ForeGround) == dim(BackGround))
   if (is.null(readsFGthresh)){
     readsFGthresh <- min(500, nrow(ForeGround)/50)  
@@ -90,7 +92,7 @@ filter_samples <- function(ForeGround, BackGround, readsFGthresh=NULL){
 #' @param ncells_thresh threshold of the number of cells
 #' @return filtered ForeGround and peaks
 #' @export filter_peaks
-filter_peaks <- function(ForeGround, peaks, nreads_thresh = 2, ncells_thresh = 10){
+filterPeaks <- function(ForeGround, peaks, nreads_thresh = 2, ncells_thresh = 10){
   which_peaks_pass = which(rowSums(ForeGround[,4:dim(ForeGround)[2]] >= nreads_thresh) >= ncells_thresh)
   return(list(ForeGroundMatrix = ForeGround[which_peaks_pass,], peaks = peaks[which_peaks_pass, ]))
 }

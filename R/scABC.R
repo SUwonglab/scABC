@@ -22,10 +22,7 @@
 #' @import Rsamtools
 #' @import GenomicRanges
 #' @output list of filtered data and peaks, cluster assigments, landmarks, and peak p-values
-#' @examples bamfiles and peakfile contain the location of the bams and peaks (in bed format)
-#'          scABCcluster = scABC(bamfiles, peakfile, nClusters = 1:5) chooses the optimal 
-#'          cluster from 1 to 5 and returns the filtered data and peak along with cluster
-#'          assignments, representative landmarks, and peak p-values
+#' @examples scABCcluster = scABC(bamfiles, peakfile, nClusters = 1:5) 
 #' @export
 scABC <- function(bamfiles, peakfile, PLOT = TRUE, QUIET = TRUE,
                   nClusters = c(), pValThresh = 2, 
@@ -35,23 +32,23 @@ scABC <- function(bamfiles, peakfile, PLOT = TRUE, QUIET = TRUE,
   peaks = select_peaks(peakfile,thresh = pValThresh)
   if(!QUIET){cat("\nreading in foreground\n")}
     
-  ForeGround = get_counts_matrix(bamfiles, peaks)
-  ForeGroundFiltered = filter_peaks(ForeGround$ForeGroundMatrix, ForeGround$peaks,
+  ForeGround = getCountsMatrix(bamfiles, peaks)
+  ForeGroundFiltered = filterPeaks(ForeGround$ForeGroundMatrix, ForeGround$peaks,
                                     nreads_thresh = nreadsThresh, ncells_thresh = ncellsThresh)
   peaks = ForeGroundFiltered$peaks
   if(!QUIET){cat("\nreading in background\n")}
   BackGround = get_background(bamfiles, peaks)
-  ForeGroundBackGroundFiltered = filter_samples(ForeGround = ForeGroundFiltered$ForeGroundMatrix, 
-                                                   BackGround = BackGround$BackGroundMatrix, 
-                                                   readsFGthresh = readsFGthresh)
+  ForeGroundBackGroundFiltered = filterSamples(ForeGround = ForeGroundFiltered$ForeGroundMatrix, 
+                                                BackGround = BackGround$BackGroundMatrix, 
+                                                readsFGthresh = readsFGthresh)
   ForeGroundMatrix = ForeGroundBackGroundFiltered$ForeGroundMatrix
   BackGroundMatrix = ForeGroundBackGroundFiltered$BackGroundMatrix
   BackGroundMedian = apply(BackGroundMatrix, 2, median)
   if(!QUIET){cat("\ndone reading in data, beginning clustering\n")}
   if(length(nClusters) == 1){
-    LandMarks = compute_landmarks(ForeGround = ForeGroundMatrix, 
-                                  BackGround = BackGroundMatrix, 
-                                  nCluster = nClusters, lambda = lambda, nTop = nTop)
+    LandMarks = computeLandmarks(ForeGround = ForeGroundMatrix, 
+                                 BackGround = BackGroundMatrix, 
+                                 nCluster = nClusters, lambda = lambda, nTop = nTop)
   }
   else if(length(nClusters) > 1){
     GapStat = getGapStat(ForeGroundMatrix, BackGroundMedian, 
@@ -61,10 +58,10 @@ scABC <- function(bamfiles, peakfile, PLOT = TRUE, QUIET = TRUE,
       plotGapStat(GapStat, nClusters=nClusters, main = "Gap Stat")
     }
     nClusters = GapStat$nClusterOptimal
-    LandMarks = compute_landmarks(ForeGround = ForeGroundMatrix, 
-                                  BackGround = BackGroundMatrix,
-                                  nCluster = GapStat$nClusterOptimal, 
-                                  lambda = lambda, nTop = nTop)
+    LandMarks = computeLandmarks(ForeGround = ForeGroundMatrix, 
+                                 BackGround = BackGroundMatrix,
+                                 nCluster = GapStat$nClusterOptimal, 
+                                 lambda = lambda, nTop = nTop)
   }
   else {
     nClusters = 1:10
@@ -75,10 +72,10 @@ scABC <- function(bamfiles, peakfile, PLOT = TRUE, QUIET = TRUE,
       plotGapStat(GapStat, nClusters=nClusters, main = "Gap Stat")
     }
     nClusters = GapStat$nClusterOptimal
-    LandMarks = compute_landmarks(ForeGround = ForeGroundMatrix, 
-                                  BackGround = BackGroundMatrix,
-                                  nCluster = nClusters, 
-                                  lambda = lambda, nTop = nTop)
+    LandMarks = computeLandmarks(ForeGround = ForeGroundMatrix, 
+                                 BackGround = BackGroundMatrix,
+                                 nCluster = nClusters, 
+                                 lambda = lambda, nTop = nTop)
   }
   LandMarkAssignments = assign2landmarks(ForeGround = ForeGroundMatrix, LandMarks)
   PeakPvals = getClusterSpecificPvalue(ForeGround = ForeGroundMatrix, cluster = LandMarkAssignments, 

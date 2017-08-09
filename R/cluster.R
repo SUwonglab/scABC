@@ -14,7 +14,7 @@ select_top <-function(x, n_top){
 #' @param nTop number of top clusters
 #' @import WeightedCluster 
 #' @export compute_landmarks
-compute_landmarks <- function(ForeGround, BackGround, nCluster = 2, lambda = 0.1, nTop = 2000){
+computeLandmarks <- function(ForeGround, BackGround, nCluster = 2, lambda = 0.1, nTop = 2000){
   # check types
   stopifnot(is.matrix(ForeGround) || is.data.frame(ForeGround))
   stopifnot(is.matrix(BackGround) || is.data.frame(BackGround))
