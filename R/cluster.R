@@ -91,10 +91,11 @@ getClusterSpecificPvalue <- function(ForeGround, cluster_assignments, background
   
   ForeGround <- t(ForeGround) # make ForeGround n by p
   
+  which2remove = which(background_medians>0)
   ## remove the background_medians=0 samples
-  ForeGround <- ForeGround[which(background_medians>0),]
-  cluster_assignments <- cluster_assignments[which(background_medians>0)]
-  background_medians <- background_medians[which(background_medians>0)]
+  ForeGround <- ForeGround[which2remove,]
+  cluster_assignments <- cluster_assignments[which2remove]
+  background_medians <- background_medians[which2remove]
   
   ## get beta_MLE
   if (!quiet){

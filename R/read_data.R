@@ -44,7 +44,7 @@ getCountsMatrix <- function(bamfiles, peaks){
   sample_names = c(do.call(rbind, lapply(counts_list, function(x) head(toString(x$file[1])))))
   counts_mat = do.call(cbind, lapply(counts_list, function(x) x$records))
   colnames(counts_mat) = sample_names
-  rownames(counts_mat) = elementMetadata(peaksGR)[,1]
+  rownames(counts_mat) = elementMetadata(peaks)[,1]
   counts_info = data.frame(chrom = counts_list[[1]]$space, start = counts_list[[1]]$start, end = counts_list[[1]]$end, name = peaks$id, pValue = peaks$pVal)
   return(list(peaks = counts_info, ForeGroundMatrix = counts_mat))
 }

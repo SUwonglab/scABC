@@ -84,6 +84,9 @@ scABC <- function(bamfiles, peakfile, PLOT = TRUE, QUIET = TRUE,
                                        quiet=QUIET)
   which_peaks = which(!is.na(PeakPvals$pvalue[,1]))
   
+  if(!QUIET){
+    cat("dim(peaks) = ", dim(peaks), "\n")
+  }
   return(list(ForeGroundMatrix = ForeGroundMatrix[which_peaks, ], peaks = peaks[which_peaks, ],
               nClusters = nClusters, cluster_assignments = LandMarkAssignments,
                LandMarks = LandMarks[which_peaks, ], PeakPVals = PeakPvals$pvalue[which_peaks, ]))
