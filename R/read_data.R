@@ -19,13 +19,13 @@ selectPeaks <- function(filename, thresh = 2){
 }
 
 peaks2GRanges <- function(peaks, upstream = 0, downstream = 0){
-  peaks.gr = with(peaks, GRanges(chrom, IRanges(sapply(start, function(x) max(0, x - upstream)), end + downstream), id = name, pVal = pValue))
+  peaks.gr = with(peaks, GenomicRanges::GRanges(chrom, IRanges::IRanges(sapply(start, function(x) max(0, x - upstream)), end + downstream), id = name, pVal = pValue))
 }
 
 # peaks should be in GenomicRanges 
 get_counts_from_bam <- function(bamfile, peaks){
-  param = ScanBamParam(which = peaks, what = c("rname", "pos", "strand", "qwidth"))
-  counts = countBam(bamfile, param = param, flag = scanBamFlag(isDuplicate = FALSE, isUnmappedQuery = FALSE))
+  param = Rsamtools::ScanBamParam(which = peaks, what = c("rname", "pos", "strand", "qwidth"))
+  counts = Rsamtools::countBam(bamfile, param = param, flag = Rsamtools::scanBamFlag(isDuplicate = FALSE, isUnmappedQuery = FALSE))
   return(counts[,c("space", "start", "end", "file", "records")])
 }
 
@@ -44,7 +44,7 @@ getCountsMatrix <- function(bamfiles, peaks){
   sample_names = c(do.call(rbind, lapply(counts_list, function(x) head(toString(x$file[1])))))
   counts_mat = do.call(cbind, lapply(counts_list, function(x) x$records))
   colnames(counts_mat) = sample_names
-  rownames(counts_mat) = elementMetadata(peaks)[,1]
+  rownames(counts_mat) = GenomicRanges::elementMetadata(peaks)[,1]
   counts_info = data.frame(chrom = counts_list[[1]]$space, start = counts_list[[1]]$start, end = counts_list[[1]]$end, name = peaks$id, pValue = peaks$pVal)
   return(list(peaks = counts_info, ForeGroundMatrix = counts_mat))
 }

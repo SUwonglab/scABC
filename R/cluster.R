@@ -27,7 +27,7 @@ computeLandmarks <- function(ForeGround, BackGround, nCluster = 2, lambda = 0.1,
   BGmedian = apply(BackGround, 2, median);
   c = min(8, median(BGmedian));
   weights = 1/(1 + exp(-(BGmedian - c)/(c*lambda)));
-  kMeds = wcKMedoids(FGdist, k = nCluster, weights = weights);
+  kMeds = WeightedCluster::wcKMedoids(FGdist, k = nCluster, weights = weights);
   kMedsCluster = kMeds$clustering;
   kMedsCluster = as.numeric(factor(kMedsCluster));
 
@@ -112,7 +112,10 @@ getClusterSpecificPvalue <- function(ForeGround, cluster_assignments, background
     cat("\nEstimating beta MAP\n")
   }
   betaMAP_ini <- rbind(0, matrix(0, nrow=length(unique(cluster_assignments)), ncol=ncol(ForeGround)))
-  result <- getbetaMAP(data=ForeGround, cluster=cluster_assignments, background_medians=background_medians, sigmas=sigmas, beta_ini=betaMAP_ini, maxiter=maxiter, thres=thresMAP, quiet=quiet)
+  result <- getbetaMAP(data=ForeGround, cluster=cluster_assignments, 
+                       background_medians=background_medians, sigmas=sigmas, 
+                       beta_ini=betaMAP_ini, maxiter=maxiter, thres=thresMAP, 
+                       quiet=quiet)
   
   if (!is.null(landmark)){
     betaMAP <- matrix( nrow=length(unique(cluster_assignments))+1, ncol=p )
