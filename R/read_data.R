@@ -6,7 +6,7 @@ sort_peaks <- function(peaks){
 #' @param filename of a bed12+3 gapped peaks file obtain from peaking calling using MACS2
 #' @return significant peaks obtained by filtering by p-value
 #' @keywords peaks
-#' @export select_peaks
+#' @export selectPeaks
 selectPeaks <- function(filename, thresh = 2){
   column_names = c("chrom", "start", "end", "name", "score", "strand",
                    "thickStart", "thickEnd", "itemRgb", "blockCount", "blockSizes",
@@ -37,7 +37,7 @@ get_counts_from_bam <- function(bamfile, peaks){
 #' @import GenomicRanges
 #' @keywords peaks
 #' @keywords counts
-#' @export get_counts_matrix
+#' @export getCountsMatrix
 getCountsMatrix <- function(bamfiles, peaks){
   peaks = peaks2GRanges(peaks)
   counts_list = lapply(bamfiles, function(x) get_counts_from_bam(x, peaks))
@@ -57,7 +57,7 @@ getCountsMatrix <- function(bamfiles, peaks){
 #' @return a matrix of chrom, start, end of peaks followed by background counts for each bam file in bamfiles
 #' @import Rsamtools
 #' @import GenomicRanges
-#' @export get_background
+#' @export getBackground
 getBackground <- function(bamfiles, peaks, upstream = 500000, downstream = 500000){
   background_peaks = peaks2GRanges(peaks, upstream, downstream)
   counts_list = lapply(bamfiles, function(x) get_counts_from_bam(x, background_peaks))
@@ -74,7 +74,7 @@ getBackground <- function(bamfiles, peaks, upstream = 500000, downstream = 50000
 #' @param BackGround matrix or data frame of BackGround values
 #' @param readsFGthresh threshold for the total reads per cell in ForeGround. Default is min(500, number of peaks/50)
 #' @return filtered ForeGround and BackGround
-#' @export filter_samples
+#' @export filterSamples
 filterSamples <- function(ForeGround, BackGround, readsFGthresh=NULL){
   stopifnot(dim(ForeGround) == dim(BackGround))
   if (is.null(readsFGthresh)){
@@ -91,7 +91,7 @@ filterSamples <- function(ForeGround, BackGround, readsFGthresh=NULL){
 #' @param nreads_thresh threshold of the number of reads
 #' @param ncells_thresh threshold of the number of cells
 #' @return filtered ForeGround and peaks
-#' @export filter_peaks
+#' @export filterPeaks
 filterPeaks <- function(ForeGround, peaks, nreads_thresh = 2, ncells_thresh = 10){
   which_peaks_pass = which(rowSums(ForeGround[,4:dim(ForeGround)[2]] >= nreads_thresh) >= ncells_thresh)
   return(list(ForeGroundMatrix = ForeGround[which_peaks_pass,], peaks = peaks[which_peaks_pass, ]))

@@ -6,14 +6,14 @@ select_top <-function(x, n_top){
 }
 
 #' compute landmarks
-#' @name compute_landmarks
+#' @name computeLandmarks
 #' @param ForeGround matrix or data frame of Foreground values
 #' @param BackGround matrix or data frame of BackGround values
 #' @param nCluster number of clusters (default = 2)
 #' @param lambda weighting parameter (default = 0.1)
 #' @param nTop number of top clusters
 #' @import WeightedCluster 
-#' @export compute_landmarks
+#' @export computeLandmarks
 computeLandmarks <- function(ForeGround, BackGround, nCluster = 2, lambda = 0.1, nTop = 2000){
   # check types
   stopifnot(is.matrix(ForeGround) || is.data.frame(ForeGround))
