@@ -58,7 +58,7 @@ assign2landmarks <- function(ForeGround, topLandmarks){
   unionTopLandmarks = which(rowSums(topLandmarks)>0)
   ## calculate Spearman correlation using only the landmark peaks
   scor = cor(ForeGround[unionTopLandmarks,], topLandmarks[unionTopLandmarks,], method = "spearman")
-  return(apply(scor, 1, which.max))
+  return(unlist(apply(scor, 1, which.max)))
 }
 
 #' getClusterSpecificPvalue
