@@ -1,0 +1,151 @@
+---
+title: "Comparing filtering"
+author: "Timothy Daley"
+date: "4/30/2017"
+output: html_document
+---
+
+
+
+```{r}
+setwd("~/scRNAseqAnalysis/scATAC-RNAseq/scABC/vignettes/")
+library(devtools)
+#library(GenomicRanges)
+#library(Rsamtools)
+#library(WeightedCluster)
+devtools::install_github("timydaley/scABC")
+library(scABC)
+# table that has experiment info
+bamfile.table = read.table(file = "NoTreatment/6Lines/SRX&Type&Batch.txt")
+head(bamfile.table)
+bamfiles = paste0("bams/", bamfile.table[,1], ".bam")
+peaks = select_peaks("NoTreatment/6Lines/mergeAll.tn5.pf.gappedPeak")
+dim(peaks)
+```
+
+```{r cache=TRUE}
+ForeGround = get_counts_matrix(bamfiles, peaks)
+```
+
+```{r cache=TRUE}
+ForeGroundFiltered = filter_peaks(ForeGround$ForeGround, ForeGround$peaks)
+peaks = ForeGroundFiltered$peaks
+```
+
+```{r cache=TRUE}
+BackGround = get_background(bamfiles, ForeGroundFiltered$peaks)
+```
+
+# New filtering of samples
+```{r cache=TRUE}
+NewFiltering = filter_samples(ForeGround = ForeGroundFiltered$ForeGround, BackGround = BackGround$BackGround)
+dim(NewFiltering$ForeGroundMatrix)
+```
+
+```{r cache=TRUE}
+NewFilteringBackGroundMedian = apply(NewFiltering$BackGroundMatrix, 2, median)
+NewFilteringGapStat = getGapStat(NewFiltering$ForeGroundMatrix, NewFilteringBackGroundMedian, nClusters=1:10, quiet = FALSE, nTop = 50000)
+NewFilteringGapStat$nClusterOptimal;
+plotGapStat(NewFilteringGapStat, nClusters = 1:10, main = "New Filtering Gap Stat")
+```
+
+### 6 clusters landmarks
+
+```{r cache=TRUE}
+NewFilteringLandMarks = compute_landmarks(ForeGround = NewFiltering$ForeGroundMatrix, 
+                                      BackGround = NewFiltering$BackGroundMatrix, 
+                                      nCluster = 6, lambda = 1, nTop = 2000)
+cor(NewFilteringLandMarks, NewFilteringLandMarks, method = 'spearman');
+NewFilteringLandMarkAssignments = assign2landmarks(NewFiltering$ForeGroundMatrix, NewFilteringLandMarks)
+NewFilteringCell2LandmarkCorrelation = cbind(apply(NewFiltering$ForeGroundMatrix, 2, function(x) cor(x, NewFilteringLandMarks[,1], method = 'spearman')), 
+                                         apply(NewFiltering$ForeGroundMatrix, 2, function(x) cor(x, NewFilteringLandMarks[,2], method = 'spearman')), 
+                                         apply(NewFiltering$ForeGroundMatrix, 2, function(x) cor(x, NewFilteringLandMarks[,3], method = 'spearman')), 
+                                         apply(NewFiltering$ForeGroundMatrix, 2, function(x) cor(x, NewFilteringLandMarks[,4], method = 'spearman')), 
+                                         apply(NewFiltering$ForeGroundMatrix, 2, function(x) cor(x, NewFilteringLandMarks[,5], method = 'spearman')), 
+                                         apply(NewFiltering$ForeGroundMatrix, 2, function(x) cor(x, NewFilteringLandMarks[,6], method = 'spearman')))
+head(NewFilteringCell2LandmarkCorrelation, 10)
+range(NewFilteringCell2LandmarkCorrelation)
+cell.info = bamfile.table[which(paste0(bamfile.table[,1], ".bam") %in% colnames(NewFiltering$ForeGroundMatrix)), 2]
+library(gplots) 
+library(RColorBrewer)
+library(devtools)
+source_url("https://raw.githubusercontent.com/obigriffith/biostar-tutorials/master/Heatmaps/heatmap.3.R")
+scalered <- colorRampPalette(c("white", "red"), space = "rgb")(256)
+rcols1 = brewer.pal(6, "Accent")[1:6]
+rowcols1 = rcols1[cell.info]
+rcols2 = brewer.pal(6, "Dark2")[1:6]
+rowcols2 = rcols2[NewFilteringLandMarkAssignments]
+rowcols = rbind(rowcols1, rowcols2)
+rownames(rowcols) = c("rep info", "cluster")
+heatmap.3(NewFilteringCell2LandmarkCorrelation, dendrogram='none', Rowv=FALSE, Colv=FALSE, trace='none', col = scalered, margin = c(5, 5), density.info = "none", RowSideColors = rowcols, RowSideColorsSize=2, symm=F,symkey=F,symbreaks=F, scale="none")
+legend("bottomleft", legend = c(unique(cell.info), paste0("cluster ", 1:6)), col = c(rcols1, rcols2), border=FALSE, bty="n", y.intersp = 0.7, cex=0.7, pch = 15)
+```
+
+
+# Old filtering of samples
+
+```{r cache=TRUE}
+which_samples_pass = which(apply(BackGround$BackGround, 2, median) >= 2)
+OldFilteringForeGround = ForeGroundFiltered$ForeGround[ ,which_samples_pass]
+OldFilteringBackGround = BackGround$BackGround[ ,which_samples_pass]
+dim(OldFilteringForeGround)
+```
+
+
+```{r cache=TRUE}
+OldFilteringBackGroundMedian = apply(OldFilteringBackGround, 2, median)
+OldFilteringGapStat = getGapStat(OldFilteringForeGround, OldFilteringBackGroundMedian, nClusters=1:10, quiet = FALSE, nTop = 50000)
+OldFilteringGapStat$nClusterOptimal;
+plotGapStat(OldFilteringGapStat, nClusters = 1:10, main = "Old Filtering Gap Stat")
+```
+
+
+### 6 clusters landmarks
+
+```{r cache=TRUE}
+OldFilteringLandMarks = compute_landmarks(ForeGround = OldFilteringForeGround, 
+                                      BackGround = OldFilteringBackGround, 
+                                      nCluster = 6, lambda = 1, nTop = 2000)
+cor(OldFilteringLandMarks, OldFilteringLandMarks, method = 'spearman');
+OldFilteringLandMarkAssignments = assign2landmarks(OldFilteringForeGround, OldFilteringLandMarks)
+OldFilteringCell2LandmarkCorrelation = cbind(apply(OldFilteringForeGround, 2, function(x) cor(x, OldFilteringLandMarks[,1], method = 'spearman')), 
+                                         apply(OldFilteringForeGround, 2, function(x) cor(x, OldFilteringLandMarks[,2], method = 'spearman')), 
+                                         apply(OldFilteringForeGround, 2, function(x) cor(x, OldFilteringLandMarks[,3], method = 'spearman')), 
+                                         apply(OldFilteringForeGround, 2, function(x) cor(x, OldFilteringLandMarks[,4], method = 'spearman')), 
+                                         apply(OldFilteringForeGround, 2, function(x) cor(x, OldFilteringLandMarks[,5], method = 'spearman')), 
+                                         apply(OldFilteringForeGround, 2, function(x) cor(x, OldFilteringLandMarks[,6], method = 'spearman')))
+head(OldFilteringCell2LandmarkCorrelation, 10)
+range(OldFilteringCell2LandmarkCorrelation)
+cell.info = bamfile.table[which(paste0(bamfile.table[,1], ".bam") %in% colnames(OldFilteringForeGround)), 2]
+library(gplots) 
+library(RColorBrewer)
+library(devtools)
+source_url("https://raw.githubusercontent.com/obigriffith/biostar-tutorials/master/Heatmaps/heatmap.3.R")
+scalered <- colorRampPalette(c("white", "red"), space = "rgb")(256)
+rcols1 = brewer.pal(6, "Accent")[1:6]
+rowcols1 = rcols1[cell.info]
+rcols2 = brewer.pal(6, "Dark2")[1:6]
+rowcols2 = rcols2[OldFilteringLandMarkAssignments]
+rowcols = rbind(rowcols1, rowcols2)
+rownames(rowcols) = c("rep info", "cluster")
+heatmap.3(OldFilteringCell2LandmarkCorrelation, dendrogram='none', Rowv=FALSE, Colv=FALSE, trace='none', col = scalered, margin = c(5, 5), density.info = "none", RowSideColors = rowcols, RowSideColorsSize=2, symm=F,symkey=F,symbreaks=F, scale="none")
+legend("bottomleft", legend = c(unique(cell.info), paste0("cluster ", 1:6)), col = c(rcols1, rcols2), border=FALSE, bty="n", y.intersp = 0.7, cex=0.7, pch = 15)
+```
+
+
+# Intersection of filtering
+
+```{r cache=TRUE}
+dim(OldFilteringBackGround)
+dim(NewFiltering$BackGroundMatrix)
+length(intersect(colnames(NewFiltering$BackGroundMatrix), colnames(OldFilteringBackGround)))
+```
+
+# Write files
+
+```{r}
+write.table(OldFilteringForeGround, file = "tables/OldFilteringForeGround.txt", quote = FALSE, sep = "\t", row.names = FALSE, col.names = TRUE)
+write.table(OldFilteringBackGround, file = "tables/OldFilteringBackGround.txt", quote = FALSE, sep = "\t", row.names = FALSE, col.names = TRUE)
+write.table(NewFiltering$ForeGroundMatrix, file = "tables/NewFilteringForeGround.txt", quote = FALSE, sep = "\t", row.names = FALSE, col.names = TRUE)
+write.table(NewFiltering$BackGroundMatrix, file = "tables/NewFilteringBackGround.txt", quote = FALSE, sep = "\t", row.names = FALSE, col.names = TRUE)
+```

@@ -31,7 +31,11 @@ Several of the cells have multiple runs.  We merged these runs using samtools.
 ## Obtaining and filtering counts
 
 We will use scABC to analyse the single cell data.  The cell level bam files and their samtools indexes are contained in the folder bams.
+```{r echo=FALSE}
+source("~/scRNAseqAnalysis/scATAC-RNAseq/scABC/R/read_data.R")
+```
 ```{r}
+# always run
 setwd("~/scRNAseqAnalysis/scATAC-RNAseq/scABC/vignettes/")
 library(devtools)
 devtools::install_github("timydaley/scABC", force = TRUE)
@@ -40,24 +44,27 @@ library(scABC)
 bamfile.table = read.table(file = "NoTreatment/6Lines/SRX&Type&Batch.txt")
 head(bamfile.table)
 bamfiles = paste0("bams/", bamfile.table[,1], ".bam")
-peaks = select_peaks("NoTreatment/6Lines/mergeAll.tn5.pf.gappedPeak")
+peaks = selectPeaks("NoTreatment/6Lines/mergeAll.tn5.pf.gappedPeak")
 dim(peaks)
 ```
 
 Computing the Forground and Background matrix takes quite a bit of time.  We can do this once and cache the results for later.
 
 ```{r cache=TRUE}
-ForeGround = get_counts_matrix(bamfiles, peaks);
+#
+ForeGround = getCountsMatrix(bamfiles, peaks);
 ```
 
 ```{r cache=TRUE}
-ForeGroundFiltered = filter_peaks(ForeGround$ForeGroundMatrix, peaks)
+#
+ForeGroundFiltered = filterPeaks(ForeGround$ForeGroundMatrix, peaks)
 peaks = ForeGroundFiltered$peaks
 ```
 
 ```{r cache=TRUE}
-BackGround = get_background(bamfiles, peaks)
-ForeGroundBackGroundFiltered = filter_samples(ForeGround = ForeGroundFiltered$ForeGroundMatrix, BackGround = BackGround$BackGroundMatrix)
+#
+BackGround = getBackground(bamfiles, peaks)
+ForeGroundBackGroundFiltered = filterSamples(ForeGround = ForeGroundFiltered$ForeGroundMatrix, BackGround = BackGround$BackGroundMatrix)
 InSilicoForeGround = ForeGroundBackGroundFiltered$ForeGroundMatrix
 InSilicoBackGround = ForeGroundBackGroundFiltered$BackGroundMatrix
 InSilicoPeaks = peaks
@@ -66,7 +73,8 @@ InSilicoPeaks = peaks
 Now let's compute the landmarks and take a look at them.
 
 ```{r message=FALSE, cache=TRUE}
-InSilicoLandMarks = compute_landmarks(ForeGround = InSilicoForeGround, 
+#
+InSilicoLandMarks = computeLandmarks(ForeGround = InSilicoForeGround, 
                                       BackGround = InSilicoBackGround, 
                                       nCluster = 6, lambda = 1, nTop = 2000)
 # look at correlation between landmarks
@@ -76,7 +84,7 @@ cor(InSilicoLandMarks, InSilicoLandMarks, method = 'spearman')
 It looks like the cluster landmarks are well seperated.  Let's look at the cell to cluster assignments.
 
 ```{r cache=TRUE}
-# assign cells to the closest landmark
+# assign cells to the closest landmark #
 InSilicoLandMarkAssignments = assign2landmarks(InSilicoForeGround, InSilicoLandMarks)
 InSilicoCell2LandmarkCorrelation = cbind(apply(InSilicoForeGround, 2, function(x) cor(x, InSilicoLandMarks[,1], method = 'spearman')), 
                                          apply(InSilicoForeGround, 2, function(x) cor(x, InSilicoLandMarks[,2], method = 'spearman')), 
@@ -112,6 +120,7 @@ legend("bottomleft", legend = c(unique(cell.info)), col = rcols1, border=FALSE,
 To view the above figure better, we're normalize the correlations of each cell so that the maximum is 1.
 
 ```{r cache=TRUE}
+# for prettyness
 for(i in 1:dim(InSilicoCell2LandmarkCorrelation)[1]){
   InSilicoCell2LandmarkCorrelation[i,] = InSilicoCell2LandmarkCorrelation[i,]/mean(InSilicoCell2LandmarkCorrelation[i,])
 }
@@ -126,6 +135,7 @@ legend("bottomleft", legend = c(unique(cell.info)), col = rcols1, border=FALSE,
 The clustering correctly classifies all cells except for 1.  This assumes we knew the number of clusters.  What if we let scABC choose the number of clusters?
 
 ```{r message=FALSE, cache=TRUE}
+#
 InSilicoBackGroundMedian = apply(InSilicoBackGround, 2, median)
 InSilicoGapStat = getGapStat(InSilicoForeGround, InSilicoBackGroundMedian, 
                              nClusters=1:10, nPerm = 20, quiet = TRUE)
@@ -136,6 +146,7 @@ plotGapStat(InSilicoGapStat, nClusters = 1:10, main = "In Silico Gap Stat")
 scABC chooses 6 clusters and we can continue with this number of clusters.
 
 ```{r cache=TRUE}
+#
 InSilicoPeakSelection = getClusterSpecificPvalue(ForeGround=InSilicoForeGround, cluster_assignments = InSilicoLandMarkAssignments, background_medians = InSilicoBackGroundMedian)
 InSilicoPeakPvals = InSilicoPeakSelection$pvalue
 head(InSilicoPeakPvals)
@@ -193,18 +204,19 @@ library(WeightedCluster)
 peakfile = "NoTreatment/6Lines/mergeAll.tn5.pf.gappedPeak"
 bamfile.table = read.table(file = "NoTreatment/6Lines/SRX&Type&Batch.txt")
 bamfiles = paste0("bams/", bamfile.table[,1], ".bam")
+# main function
 InSilicoSCABC = scABC(bamfiles, peakfile)
 ```
 
 We'll subset a selection of peaks to look at top 10,000 cluster specific peaks.
 ```{r cache=TRUE}
+#
 ClusterSpecificPeaksV2 = head(order(apply(InSilicoSCABC$PeakPVals, 1, min), 
                                     decreasing = FALSE), 10000)
 length(intersect(ClusterSpecificPeaks, ClusterSpecificPeaksV2))
 ```
 
 ```{r cache=TRUE}
-# all peaks are cluster specific
 scalered <- colorRampPalette(c("white", "red"), space = "rgb")(256)
 rcols1 = brewer.pal(6, "Accent")[1:6]
 rowcols1 = rcols1[cell.info]
@@ -226,6 +238,7 @@ legend("bottomleft", legend = c(unique(cell.info), paste0("cluster ", 1:6)),
 We can also select cluster specific peaks by taking peaks that are less than some threshhold.  We have to set it to be really small because Rmarkdown does not support large matrices.  
 
 ```{r cache=TRUE}
+#
 ClusterSpecificPeaksV3 = which(apply(InSilicoSCABC$PeakPVals, 1, min) < 0.0001)
 length(ClusterSpecificPeaksV3)
 ```
@@ -248,6 +261,50 @@ heatmap.3(x, dendrogram='none', Rowv=FALSE, Colv=as.dendrogram(col.clus),
           RowSideColors = rowcols, RowSideColorsSize=2, main = "Cluster specific peaks")
 legend("bottomleft", legend = c(unique(cell.info), paste0("cluster ", 1:6)), 
        col = c(rcols1, rcols2), border=FALSE, bty="n", y.intersp = 0.7, cex=0.7, pch = 15)
+```
+
+# Using chromVAR on cluster specific peaks
+
+To identify transcription factors active in cluster specific peaks we'll use chromVAR (https://greenleaflab.github.io/chromVAR/) to compute TF motifs. 
+
+First we'll look at the naive application of chromVAR without selecting for cluster specific peaks
+
+```{r cache=TRUE}
+#
+ClusterSpecificPeaks = data.frame(chrom = InSilicoSCABC$peaks$chrom, start = InSilicoSCABC$peaks$start, end = InSilicoSCABC$peaks$end, cluster1pvals = InSilicoSCABC$PeakPVals[,1], cluster2pvals = InSilicoSCABC$PeakPVals[,2], cluster3pvals = InSilicoSCABC$PeakPVals[,3], cluster4pvals = InSilicoSCABC$PeakPVals[,4], cluster5pvals = InSilicoSCABC$PeakPVals[,5], cluster6pvals = InSilicoSCABC$PeakPVals[,6])
+dim(ClusterSpecificPeaks)
+write.table(ClusterSpecificPeaks, file = "InSilicoPeaksWithPvals.txt", sep = "\t", quote = FALSE, col.names = FALSE, row.names = FALSE)
+#BiocInstaller::biocLite("GreenleafLab/chromVAR")
+library(chromVAR)
+library(motifmatchr)
+library(Matrix)
+library(SummarizedExperiment)
+extra_cols = c(4, 5, 6, 7, 8, 9)
+names(extra_cols) = c("cluster1", "cluster2", "cluster3", "cluster4", "cluster5", "cluster6")
+peaks = getPeaks("~/scRNAseqAnalysis/scATAC-RNAseq/scABC/vignettes/InSilicoPeaksWithPvals.txt", extra_cols = extra_cols)
+# peaks include broad peaks, remove broad peaks
+hist(width(peaks), breaks = 200)
+length(peaks)
+peaks = peaks[which(width(peaks) <= 800)]
+length(peaks)
+#peaks = resize(peaks, width = 500, fix = "center")
+#peaks = sort(peaks)
+bamfiles = paste0("bams/", colnames(InSilicoSCABC$ForeGroundMatrix))
+frag_counts = getCounts(bamfiles, peaks, paired = FALSE, 
+                         colData = data.frame(cluster.assigment = factor(InSilicoSCABC$cluster_assignments)))
+library(BSgenome.Hsapiens.UCSC.hg19)
+frag_counts = addGCBias(frag_counts, genome = BSgenome.Hsapiens.UCSC.hg19)
+motifs <- getJasparMotifs()
+motifs.matched = matchMotifs(motifs, frag_counts, genome = BSgenome.Hsapiens.UCSC.hg19)
+dev = computeDeviations(object = frag_counts, annotations = motifs.matched)
+dev.scores = deviationScores(dev)
+variability = computeVariability(dev)
+```
+
+Now we'll look at the TF motifs within cluster specific peaks.
+
+```{r}
+
 ```
 
 # Session Info

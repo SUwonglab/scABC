@@ -1,0 +1,122 @@
+---
+title: "A small example of scABC"
+author: "Timothy Daley"
+date: "8/27/2017"
+output: html_document
+---
+
+Here we'll walk through an example analysis of a small dataset, 25 cells of each of BJ and TF1 cell lines.  
+
+The bam files were obtained by applying the Kundaje pipeline (https://github.com/kundajelab/atac_dnase_pipelines) to all of the single cells from the six cell lines described in the paper.  
+
+# Detailed workflow
+
+```{r}
+# always run
+library(devtools)
+devtools::install_github("timydaley/scABC", force = TRUE)
+library(scABC)
+```
+```{r eval=FALSE}
+# not evaluated, preprocessing
+bamfiles = paste0("SRX860", c(379:474, 187:282), "Chr12.bam")
+peakfile = "../inst/extdata/chr12Peaks.bed"
+peaks = selectPeaks(peakfile)
+ForeGround = getCountsMatrix(bamfiles, peaks)
+ForeGroundFiltered = filterPeaks(ForeGround$ForeGroundMatrix, peaks)
+peaks = ForeGroundFiltered$peaks
+BackGround = getBackground(bamfiles, peaks)
+ForeGroundBackGroundFiltered = filterSamples(ForeGround = ForeGroundFiltered$ForeGroundMatrix, 
+                                             BackGround = BackGround$BackGroundMatrix)
+ForeGroundMatrix = ForeGroundBackGroundFiltered$ForeGroundMatrix
+BackGroundMatrix = ForeGroundBackGroundFiltered$BackGroundMatrix
+```
+
+Now that the data is preprocessed we can apply scABC to cluster it.
+
+```{r}
+data(testData, package = "scABC")
+nClusters = 1:10
+BackGroundMedian = apply(testData$BackGroundMatrix, 2, median)
+GapStat = getGapStat(testData$ForeGroundMatrix, BackGroundMedian, 
+                     nClusters=nClusters, quiet = TRUE)
+GapStat$nClusterOptimal
+plotGapStat(GapStat, nClusters = nClusters, main = "TF1 vs BJ")
+```
+
+2 clusters is optimal, as it should be.  We'll compute the landmarks using 2 clusters.
+
+```{r}
+LandMarks = computeLandmarks(ForeGround = testData$ForeGroundMatrix, 
+                             BackGround = testData$BackGroundMatrix, 
+                             nCluster = 2, nTop = 500)
+cor(LandMarks, LandMarks, method = 'spearman')
+LandMarkAssignments = assign2landmarks(testData$ForeGroundMatrix, LandMarks)
+```
+
+The above steps can also be performed simply with the command
+```{r eval=FALSE}
+s = scABC(bamfiles, peakfile)
+```
+
+## Quality of clustering
+
+Let's look at how good the clustering was.
+
+```{r}
+Cell2LandmarkCorrelation = cbind(apply(testData$ForeGroundMatrix, 2, function(x) cor(x, LandMarks[,1], method = 'spearman')), 
+                                 apply(testData$ForeGroundMatrix, 2, function(x) cor(x, LandMarks[,2], method = 'spearman')))
+library(gplots) 
+library(RColorBrewer)
+library(devtools)
+source_url("https://raw.githubusercontent.com/obigriffith/biostar-tutorials/master/Heatmaps/heatmap.3.R")
+scalered <- colorRampPalette(c("white", "red"), space = "rgb")(256)
+rcols1 = brewer.pal(3, "Accent")[1:2]
+rowcols1 = rcols1[testData$trueLabels[which(testData$bamfiles %in% colnames(testData$ForeGroundMatrix))]]
+rcols2 = brewer.pal(3, "Dark2")[1:2]
+rowcols2 = rcols2[LandMarkAssignments]
+rowcols = rbind(rowcols1, rowcols2)
+rownames(rowcols) = c("cell type", "cluster")
+heatmap.3(Cell2LandmarkCorrelation, dendrogram='none', Rowv=FALSE, Colv=FALSE,
+          trace='none', col = scalered, margin = c(5, 5), density.info = "none", 
+          RowSideColors = rowcols, RowSideColorsSize=2, symm=F,symkey=F,
+          symbreaks=F, scale="none")
+legend("bottomleft", legend = c(unique(sapply(testData$trueLabels, toString)), paste0("cluster ", 1:2)), col = c(rcols1, rcols2), border=FALSE, bty="n", y.intersp = 0.7, cex=0.7, pch = 15)
+```
+
+## Cluster specific peaks
+
+Let's now look at cluster specific peaks.
+
+```{r}
+PeakSelection = getClusterSpecificPvalue(ForeGround=testData$ForeGroundMatrix, cluster_assignments = LandMarkAssignments, background_medians = BackGroundMedian)
+PeakPvals = PeakSelection$pvalue
+head(PeakPvals)
+rownames(rowcols) = c("rep info", "cluster")
+x = t(testData$ForeGroundMatrix)
+d = as.dist(1 - cor(x, method = "spearman"))
+col.clus = hclust(d, method ="centroid")
+#truncate to see patterns
+x[which(x > 5)] = 5
+heatmap.3(x, dendrogram='none', Rowv=FALSE, Colv=col.clus, trace='none', col = scalered, 
+          margin = c(5, 5), density.info = "none", RowSideColors = rowcols, 
+          RowSideColorsSize=2, main = "All peaks")
+legend("bottomleft", legend = c(unique(sapply(testData$trueLabels, toString)), paste0("cluster ", 1:2)), col = c(rcols1, rcols2), border=FALSE, bty="n", y.intersp = 0.7, cex=0.7, pch = 15)
+```
+
+It's difficult to see which peaks are cluster specific because of the sparsity of the data.  Let's look at only the cluster specific peaks.
+
+```{r}
+ClusterSpecificPeaks = which(apply(PeakPvals, 1, min) < 1e-6)
+length(ClusterSpecificPeaks)
+ x = t(testData$ForeGroundMatrix[ClusterSpecificPeaks, ])
+d = as.dist(1 - cor(x, method = "spearman"))
+col.clus = hclust(d, method ="complete")
+x[which(x > 5)] = 5
+heatmap.3(x, dendrogram='none', Rowv=FALSE, Colv=col.clus, trace='none', col = scalered, 
+          margin = c(5, 5), density.info = "none", RowSideColors = rowcols, 
+          RowSideColorsSize=2, main = "Cluster specific peaks")
+legend("bottomleft", legend = c(unique(sapply(testData$trueLabels, toString)), paste0("cluster ", 1:2)), col = c(rcols1, rcols2), border=FALSE, bty="n", y.intersp = 0.7, cex=0.7, pch = 15)
+```
+
+It seems that most of the cluster specific peaks are specific to BJ, which is consistent with results from analysing all 6 cell lines together.
