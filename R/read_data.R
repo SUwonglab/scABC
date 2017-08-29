@@ -25,31 +25,50 @@ peaks2GRanges <- function(peaks, upstream = 0, downstream = 0){
 # peaks should be in GenomicRanges 
 get_counts_from_bam <- function(bamfile, peaks){
   param = Rsamtools::ScanBamParam(which = peaks, what = c("rname", "pos", "strand", "qwidth"))
-  counts = Rsamtools::countBam(bamfile, param = param, flag = Rsamtools::scanBamFlag(isDuplicate = FALSE, isUnmappedQuery = FALSE))
+  counts = Rsamtools::countBam(bamfile, param = param, 
+                               flag = Rsamtools::scanBamFlag(isDuplicate = FALSE, 
+                                                             isUnmappedQuery = FALSE))
   return(counts[,c("space", "start", "end", "file", "records")])
 }
 
-#' get_counts_matrix
+getCountsByReadGroup <- function(bamfile, peaks){
+  param = Rsamtools::ScanBamParam(which = peaks, what = c("rname", "pos", "strand", "qwidth"), 
+                                  tag = "RG")
+  scanned_bam = Rsamtools::scanBam(bamfile, param = param,
+                                   flag = Rsamtools::scanBamFlag(isDuplicate = FALSE, 
+                                                                 isUnmappedQuery = FALSE))
+  return(0)
+}
+
+#' get counts matrix
 #' @param bamfiles a vector of filenames of input bam files
 #' @param peaks a bed15 format file returned from select_peaks
+#' @param byReadGroup boolean variable indicating whether or not individual experiments are separated by read group
 #' @return a matrix of chrom, start, end of peaks followed by counts of each bam file in bamfiles
 #' @import Rsamtools 
 #' @import GenomicRanges
 #' @keywords peaks
 #' @keywords counts
 #' @export getCountsMatrix
-getCountsMatrix <- function(bamfiles, peaks){
+getCountsMatrix <- function(bamfiles, peaks, byReadGroup = FALSE){
   peaks = peaks2GRanges(peaks)
-  counts_list = lapply(bamfiles, function(x) get_counts_from_bam(x, peaks))
-  sample_names = c(do.call(rbind, lapply(counts_list, function(x) head(toString(x$file[1])))))
-  counts_mat = do.call(cbind, lapply(counts_list, function(x) x$records))
-  colnames(counts_mat) = sample_names
-  rownames(counts_mat) = GenomicRanges::elementMetadata(peaks)[,1]
-  counts_info = data.frame(chrom = counts_list[[1]]$space, start = counts_list[[1]]$start, end = counts_list[[1]]$end, name = peaks$id, pValue = peaks$pVal)
+  if(byReadGroup){
+    
+  }
+  else{
+    counts_list = lapply(bamfiles, function(x) get_counts_from_bam(x, peaks))
+    sample_names = c(do.call(rbind, lapply(counts_list, function(x) head(toString(x$file[1])))))
+    counts_mat = do.call(cbind, lapply(counts_list, function(x) x$records))
+    colnames(counts_mat) = sample_names
+    rownames(counts_mat) = GenomicRanges::elementMetadata(peaks)[,1]
+    counts_info = data.frame(chrom = counts_list[[1]]$space, start = counts_list[[1]]$start, end = counts_list[[1]]$end, name = peaks$id, pValue = peaks$pVal)
+  }
   return(list(peaks = counts_info, ForeGroundMatrix = counts_mat))
 }
 
-#' compute_background
+
+
+#' compute background counts matrix
 #' @param bamfiles a vector of filenames of input bamfiles
 #' @param peaks a bed15 format file returned from select peaks
 #' @param upstream number of bases upstream of peak to consider for computing background
@@ -69,7 +88,7 @@ getBackground <- function(bamfiles, peaks, upstream = 500000, downstream = 50000
   return(list(peaks = counts_info, BackGroundMatrix = background_counts))
 }
 
-#' filter_samples
+#' filter samples by comparing foreground against background
 #' @param ForeGround matrix or data frame of ForeGround values
 #' @param BackGround matrix or data frame of BackGround values
 #' @param readsFGthresh threshold for the total reads per cell in ForeGround. Default is min(500, number of peaks/50)
@@ -85,7 +104,7 @@ filterSamples <- function(ForeGround, BackGround, readsFGthresh=NULL){
               BackGroundMatrix = BackGround[,which_samples_pass]))
 }
 
-#' filter_peaks
+#' filter peaks
 #' @param ForeGround matrix or data frame of Foreground values
 #' @param peaks a bed format file of peaks
 #' @param nreads_thresh threshold of the number of reads

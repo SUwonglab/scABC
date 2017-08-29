@@ -2,7 +2,7 @@
 % Please edit documentation in R/cluster.R
 \name{getGapStat}
 \alias{getGapStat}
-\title{getGapStat}
+\title{get gap statistic and choose best cluster}
 \usage{
 getGapStat(ForeGround, BackGroundMedian, nClusters = 1:10, nPerm = 20,
   nTop = 5000, quiet = FALSE)
@@ -22,5 +22,5 @@ getGapStat(ForeGround, BackGroundMedian, nClusters = 1:10, nPerm = 20,
 list of gap stat stuff
 }
 \description{
-getGapStat
+get gap statistic and choose best cluster
 }

@@ -61,7 +61,7 @@ assign2landmarks <- function(ForeGround, topLandmarks){
   return(unlist(apply(scor, 1, which.max)))
 }
 
-#' getClusterSpecificPvalue
+#' get cluster specific pvalues
 #' 
 #' @param ForeGround matrix of peaks by cells counts
 #' @param cluster_assignments matrix of cluster indicator membership 
@@ -319,7 +319,7 @@ getContrast <- function(nCluster){
   return(list(constrasts=constrasts, constrastsCluster=constrastsCluster))
 }
 
-#' getGapStat
+#' get gap statistic and choose best cluster
 #' @param ForeGround matrix or data frame of ForeGround values
 #' @param BackGround matrix or data frame of BackGround values
 #' @param nClusters vector of clusters to try, default: 1:10
@@ -422,7 +422,7 @@ getGapStat <- function(ForeGround, BackGroundMedian, nClusters=1:10,
   return(list(ObjData=ObjData_nClusters, ObjPerm=ObjPerm_nClusters, nClusterOptimal=nClusterOptimal))
 }
 
-#' plotGapStat
+#' plot gap statistic
 #' @param GapStat output of getGapStat
 #' @param nClusters vector of clusters to try, default: 1:10
 #' @param main title of plot

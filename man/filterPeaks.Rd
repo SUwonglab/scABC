@@ -2,7 +2,7 @@
 % Please edit documentation in R/read_data.R
 \name{filterPeaks}
 \alias{filterPeaks}
-\title{filter_peaks}
+\title{filter peaks}
 \usage{
 filterPeaks(ForeGround, peaks, nreads_thresh = 2, ncells_thresh = 10)
 }
@@ -19,5 +19,5 @@ filterPeaks(ForeGround, peaks, nreads_thresh = 2, ncells_thresh = 10)
 filtered ForeGround and peaks
 }
 \description{
-filter_peaks
+filter peaks
 }

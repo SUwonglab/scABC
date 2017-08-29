@@ -1,8 +1,8 @@
 #' scABC
-#' @author Timothy Daley \email{tdaley@stanford.edu}, Zhixiang Lin \email{zl235@stanford.edu},
-#'         Mahdi Zamanighomi \email{mzamani@stanford.edu}
+#' 
 #' @param bamfiles location of bam files
 #' @param peakfile location of peak file
+#' @param byReadGroup boolean variable indicating whether or not individual experiments are separated by read group
 #' @param PLOT boolean variable to make plots, default: TRUE
 #' @param QUIET boolean variable for verbosity, default: TRUE
 #' @param nClusters number of clusters, if not set manually then the number of clusters is determined by gap stat analysis
@@ -21,10 +21,15 @@
 #' @import WeightedCluster 
 #' @import Rsamtools
 #' @import GenomicRanges
-#' @output list of filtered data and peaks, cluster assigments, landmarks, and peak p-values
-#' @examples scABCcluster = scABC(bamfiles, peakfile, nClusters = 1:5) 
 #' @export
-scABC <- function(bamfiles, peakfile, PLOT = TRUE, QUIET = TRUE,
+#' @examples 
+#' 
+#' # bamfiles is a vector of bamfiles and peakfile is the location of the peaks
+#' bamfiles = sapply(paste0("SRX860", c(379:474, 187:282), "Chr12.bam"), function(x) system.file("extdata", x, package = "scABC"))
+#' peakfile = system.file("extdata", "chr12Peaks.bed", package = "scABC")
+#' scABCcluster = scABC(bamfiles, peakfile, nClusters = 1:5) 
+scABC <- function(bamfiles, peakfile, byReadGroup = FALSE,
+                  PLOT = TRUE, QUIET = TRUE,
                   nClusters = c(), pValThresh = 2, 
                   nreadsThresh = 2, ncellsThresh = 10, readsFGthresh = NULL, 
                   lambda = 1, nTop = 2000, nPerm = 20, nTopGapStat = 5000, 

@@ -2,7 +2,7 @@
 % Please edit documentation in R/read_data.R
 \name{filterSamples}
 \alias{filterSamples}
-\title{filter_samples}
+\title{filter samples by comparing foreground against background}
 \usage{
 filterSamples(ForeGround, BackGround, readsFGthresh = NULL)
 }
@@ -17,5 +17,5 @@ filterSamples(ForeGround, BackGround, readsFGthresh = NULL)
 filtered ForeGround and BackGround
 }
 \description{
-filter_samples
+filter samples by comparing foreground against background
 }

@@ -2,20 +2,22 @@
 % Please edit documentation in R/read_data.R
 \name{getCountsMatrix}
 \alias{getCountsMatrix}
-\title{get_counts_matrix}
+\title{get counts matrix}
 \usage{
-getCountsMatrix(bamfiles, peaks)
+getCountsMatrix(bamfiles, peaks, byReadGroup = FALSE)
 }
 \arguments{
 \item{bamfiles}{a vector of filenames of input bam files}
 
 \item{peaks}{a bed15 format file returned from select_peaks}
+
+\item{byReadGroup}{boolean variable indicating whether or not individual experiments are separated by read group}
 }
 \value{
 a matrix of chrom, start, end of peaks followed by counts of each bam file in bamfiles
 }
 \description{
-get_counts_matrix
+get counts matrix
 }
 \keyword{counts}
 \keyword{peaks}

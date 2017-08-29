@@ -4,8 +4,8 @@
 \alias{scABC}
 \title{scABC}
 \usage{
-scABC(bamfiles, peakfile, PLOT = TRUE, QUIET = TRUE, nClusters = c(),
-  pValThresh = 2, nreadsThresh = 2, ncellsThresh = 10,
+scABC(bamfiles, peakfile, byReadGroup = FALSE, PLOT = TRUE, QUIET = TRUE,
+  nClusters = c(), pValThresh = 2, nreadsThresh = 2, ncellsThresh = 10,
   readsFGthresh = NULL, lambda = 1, nTop = 2000, nPerm = 20,
   nTopGapStat = 5000, maxiter = 1000, thresMLE = 10^-3,
   thresMAP = 10^-5)
@@ -14,6 +14,8 @@ scABC(bamfiles, peakfile, PLOT = TRUE, QUIET = TRUE, nClusters = c(),
 \item{bamfiles}{location of bam files}
 
 \item{peakfile}{location of peak file}
+
+\item{byReadGroup}{boolean variable indicating whether or not individual experiments are separated by read group}
 
 \item{PLOT}{boolean variable to make plots, default: TRUE}
 
@@ -50,9 +52,9 @@ a list of the processed ForeGround, peaks, number of clusters, cluster assignmen
 scABC
 }
 \examples{
+
+# bamfiles is a vector of bamfiles and peakfile is the location of the peaks
+bamfiles = sapply(paste0("SRX860", c(379:474, 187:282), "Chr12.bam"), function(x) system.file("extdata", x, package = "scABC"))
+peakfile = system.file("extdata", "chr12Peaks.bed", package = "scABC")
 scABCcluster = scABC(bamfiles, peakfile, nClusters = 1:5) 
-}
-\author{
-Timothy Daley \email{tdaley@stanford.edu}, Zhixiang Lin \email{zl235@stanford.edu},
-        Mahdi Zamanighomi \email{mzamani@stanford.edu}
 }

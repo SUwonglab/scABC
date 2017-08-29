@@ -2,7 +2,7 @@
 % Please edit documentation in R/read_data.R
 \name{getBackground}
 \alias{getBackground}
-\title{compute_background}
+\title{compute background counts matrix}
 \usage{
 getBackground(bamfiles, peaks, upstream = 5e+05, downstream = 5e+05)
 }
@@ -19,5 +19,5 @@ getBackground(bamfiles, peaks, upstream = 5e+05, downstream = 5e+05)
 a matrix of chrom, start, end of peaks followed by background counts for each bam file in bamfiles
 }
 \description{
-compute_background
+compute background counts matrix
 }

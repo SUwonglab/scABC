@@ -2,7 +2,7 @@
 % Please edit documentation in R/cluster.R
 \name{getClusterSpecificPvalue}
 \alias{getClusterSpecificPvalue}
-\title{getClusterSpecificPvalue}
+\title{get cluster specific pvalues}
 \usage{
 getClusterSpecificPvalue(ForeGround, cluster_assignments, background_medians,
   landmark = NULL, maxiter = 1000, thresMLE = 10^-3, thresMAP = 10^-5,
@@ -29,5 +29,5 @@ getClusterSpecificPvalue(ForeGround, cluster_assignments, background_medians,
 list of estimated betas and their standard deviations (sigma), and the p-values testing whether each peak is specific to each cluster
 }
 \description{
-getClusterSpecificPvalue
+get cluster specific pvalues
 }

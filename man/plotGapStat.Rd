@@ -2,7 +2,7 @@
 % Please edit documentation in R/cluster.R
 \name{plotGapStat}
 \alias{plotGapStat}
-\title{plotGapStat}
+\title{plot gap statistic}
 \usage{
 plotGapStat(GapStat, nClusters, main, fold = 1, cex = 0.3, lty = 2)
 }
@@ -17,5 +17,5 @@ plotGapStat(GapStat, nClusters, main, fold = 1, cex = 0.3, lty = 2)
 nothing, just plotting
 }
 \description{
-plotGapStat
+plot gap statistic
 }
