@@ -3,19 +3,31 @@ sort_peaks <- function(peaks){
 }
 
 #' select peaks
+#' 
+#' read in peaks into a table and select only those with MACS2 pValue > 1 (p < 0.1)
 #' @param filename of a bed12+3 gapped peaks file obtain from peaking calling using MACS2
 #' @return significant peaks obtained by filtering by p-value
 #' @keywords peaks
 #' @export selectPeaks
 selectPeaks <- function(filename, thresh = 2){
-  column_names = c("chrom", "start", "end", "name", "score", "strand",
-                   "thickStart", "thickEnd", "itemRgb", "blockCount", "blockSizes",
-                   "blockStarts", "signalValue", "pValue", "qValue");
-  gapped_peaks = read.table(file = filename, header = FALSE, sep = "\t",
-                            stringsAsFactors = FALSE, col.names = column_names);
-  wanted_peaks = which(gapped_peaks$pValue > thresh); # pValue is -log10(p), p < 0.1 => pValue > 2
-  wanted_peaks = sort_peaks(gapped_peaks[wanted_peaks, ])
-  return(wanted_peaks)
+  peaks = read.table(file = filename, header = FALSE, sep = "\t",
+                     stringsAsFactors = FALSE);
+  if(dim(peaks)[2] == 15){
+    # gapped peaks
+    column_names = c("chrom", "start", "end", "name", "score", "strand",
+                     "thickStart", "thickEnd", "itemRgb", "blockCount", "blockSizes",
+                     "blockStarts", "signalValue", "pValue", "qValue");
+    colnames(peaks) = column_names
+  }
+  if(dim(peaks)[2] == 10){
+    column_names = c("chrom", "start", "end", "name", "score", "strand",
+                     "foldChange", "pValue", "qValue", "summit2PeakDist")
+    colnames(peaks) = column_names
+  }
+  
+  wanted_peaks = which(peaks$pValue > thresh); # pValue is -log10(p), p < 0.1 => pValue > 2
+  peaks = sort_peaks(peaks[wanted_peaks, ])
+  return(peaks)
 }
 
 peaks2GRanges <- function(peaks, upstream = 0, downstream = 0){
@@ -31,16 +43,29 @@ get_counts_from_bam <- function(bamfile, peaks){
   return(counts[,c("space", "start", "end", "file", "records")])
 }
 
+
+getTagCounts <- function(RGtag, scannedBam, param){
+  whichRG = which(scannedBam$tag$RG == RGtag)
+  counts = 0
+  return(0)
+}
+
 getCountsByReadGroup <- function(bamfile, peaks){
   param = Rsamtools::ScanBamParam(which = peaks, what = c("rname", "pos", "strand", "qwidth"), 
                                   tag = "RG")
-  scanned_bam = Rsamtools::scanBam(bamfile, param = param,
+  scannedBam = Rsamtools::scanBam(bamfile, param = param,
                                    flag = Rsamtools::scanBamFlag(isDuplicate = FALSE, 
                                                                  isUnmappedQuery = FALSE))
+  RGtags = unique(scannedBam$tag$RG)
+  
+  counts = do.call(cbind, lapply(RGtags, function(x) x$records))
   return(0)
 }
 
 #' get counts matrix
+#' 
+#' Obtain counts matrix from bamfiles and peaks
+#' 
 #' @param bamfiles a vector of filenames of input bam files
 #' @param peaks a bed15 format file returned from select_peaks
 #' @param byReadGroup boolean variable indicating whether or not individual experiments are separated by read group
@@ -53,7 +78,7 @@ getCountsByReadGroup <- function(bamfile, peaks){
 getCountsMatrix <- function(bamfiles, peaks, byReadGroup = FALSE){
   peaks = peaks2GRanges(peaks)
   if(byReadGroup){
-    
+    # do nothing
   }
   else{
     counts_list = lapply(bamfiles, function(x) get_counts_from_bam(x, peaks))
@@ -69,6 +94,7 @@ getCountsMatrix <- function(bamfiles, peaks, byReadGroup = FALSE){
 
 
 #' compute background counts matrix
+#' 
 #' @param bamfiles a vector of filenames of input bamfiles
 #' @param peaks a bed15 format file returned from select peaks
 #' @param upstream number of bases upstream of peak to consider for computing background
@@ -89,6 +115,7 @@ getBackground <- function(bamfiles, peaks, upstream = 500000, downstream = 50000
 }
 
 #' filter samples by comparing foreground against background
+#' 
 #' @param ForeGround matrix or data frame of ForeGround values
 #' @param BackGround matrix or data frame of BackGround values
 #' @param readsFGthresh threshold for the total reads per cell in ForeGround. Default is min(500, number of peaks/50)
@@ -105,6 +132,7 @@ filterSamples <- function(ForeGround, BackGround, readsFGthresh=NULL){
 }
 
 #' filter peaks
+#' 
 #' @param ForeGround matrix or data frame of Foreground values
 #' @param peaks a bed format file of peaks
 #' @param nreads_thresh threshold of the number of reads

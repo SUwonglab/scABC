@@ -1,5 +1,7 @@
 #' scABC
 #' 
+#' Core function of the scABC package.  Does processing, clustering, and peak p-value calculation in one step.
+#' 
 #' @param bamfiles location of bam files
 #' @param peakfile location of peak file
 #' @param byReadGroup boolean variable indicating whether or not individual experiments are separated by read group
