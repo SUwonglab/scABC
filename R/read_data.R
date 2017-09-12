@@ -111,15 +111,23 @@ getCountsMatrix <- function(bamfiles, peaks, byReadGroup = FALSE){
 #' @import Rsamtools
 #' @import GenomicRanges
 #' @export getBackground
-getBackground <- function(bamfiles, peaks, upstream = 500000, downstream = 500000){
-  background_peaks = peaks2GRanges(peaks, upstream, downstream)
-  counts_list = lapply(bamfiles, function(x) get_counts_from_bam(x, background_peaks))
-  sample_names = c(do.call(rbind, lapply(counts_list, function(x) head(toString(x$file[1])))))
-  background_counts = do.call(cbind, lapply(counts_list, function(x) x$records))
-  colnames(background_counts) = sample_names
-  rownames(background_counts) = peaks$name
-  counts_info = data.frame(chrom = counts_list[[1]]$space, start = counts_list[[1]]$start, end = counts_list[[1]]$end, name = peaks$name, pValue = peaks$pValue)
-  return(list(peaks = counts_info, BackGroundMatrix = background_counts))
+getBackground <- function(bamfiles, peaks, upstream = 500000, 
+                          downstream = 500000, byReadGroup = FALSE){
+  background_peaks.gr = peaks2GRanges(peaks, upstream, downstream)
+  if(byReadGroup){
+    counts_mat = getCountsByReadGroup(bamfile, background_peaks.gr);
+    rownames(counts_mat) = peaks$name
+  }
+  else{
+    counts_list = lapply(bamfiles, function(x) get_counts_from_bam(x, background_peaks.gr))
+    sample_names = c(do.call(rbind, lapply(counts_list, function(x) head(toString(x$file[1])))))
+    counts_mat = do.call(cbind, lapply(counts_list, function(x) x$records))
+    colnames(counts_mat) = sample_names
+    rownames(counts_mat) = GenomicRanges::elementMetadata(peaks.gr)[,1]
+    #counts_info = data.frame(chrom = counts_list[[1]]$space, start = counts_list[[1]]$start, end = counts_list[[1]]$end, name = peaks$id, pValue = peaks$pVal)
+  }
+  peaks = peaks[,c("chrom", "start", "end", "name", "pValue")]
+  return(list(peaks = peaks, BackGroundMatrix = counts_mat))
 }
 
 #' filter samples by comparing foreground against background
