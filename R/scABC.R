@@ -36,7 +36,7 @@ scABC <- function(bamfiles, peakfile, byReadGroup = FALSE,
                   nreadsThresh = 2, ncellsThresh = 10, readsFGthresh = NULL, 
                   lambda = 1, nTop = 2000, nPerm = 20, nTopGapStat = 5000, 
                   maxiter=1000, thresMLE=10^-3, thresMAP=10^-5){
-  peaks = select_peaks(peakfile,thresh = pValThresh)
+  peaks = selectPeaks(peakfile,thresh = pValThresh)
   if(!QUIET){cat("\nreading in foreground\n")}
     
   ForeGround = getCountsMatrix(bamfiles, peaks, byReadGroup = byReadGroup)
@@ -44,7 +44,7 @@ scABC <- function(bamfiles, peakfile, byReadGroup = FALSE,
                                     nreads_thresh = nreadsThresh, ncells_thresh = ncellsThresh)
   peaks = ForeGroundFiltered$peaks
   if(!QUIET){cat("\nreading in background\n")}
-  BackGround = get_background(bamfiles, peaks, byReadGroup = byReadGroup)
+  BackGround = getBackground(bamfiles, peaks, byReadGroup = byReadGroup)
   ForeGroundBackGroundFiltered = filterSamples(ForeGround = ForeGroundFiltered$ForeGroundMatrix, 
                                                 BackGround = BackGround$BackGroundMatrix, 
                                                 readsFGthresh = readsFGthresh)
