@@ -20,6 +20,7 @@ selectPeaks <- function(filename, thresh = 2){
     colnames(peaks) = column_names
   }
   if(dim(peaks)[2] == 10){
+    # narrow peaks
     column_names = c("chrom", "start", "end", "name", "score", "strand",
                      "foldChange", "pValue", "qValue", "summit2PeakDist")
     colnames(peaks) = column_names
@@ -44,22 +45,27 @@ get_counts_from_bam <- function(bamfile, peaks){
 }
 
 
-getTagCounts <- function(RGtag, scannedBam, param){
-  whichRG = which(scannedBam$tag$RG == RGtag)
-  counts = 0
-  return(0)
+getTagCounts <- function(RGtag, bamfile, peaks){
+  RGparam = ScanBamParam(which = peaks, 
+                         what = c("rname", "pos", "strand", "qwidth"), 
+                         tagFilter = list(RG= c("RG", RGtag)))
+  counts = countBam(bamfile, 
+                    param = RGparam, 
+                    flag = Rsamtools::scanBamFlag(isDuplicate = FALSE, 
+                                                  isUnmappedQuery = FALSE))
+  return(counts$records)
 }
 
 getCountsByReadGroup <- function(bamfile, peaks){
-  param = Rsamtools::ScanBamParam(which = peaks, what = c("rname", "pos", "strand", "qwidth"), 
-                                  tag = "RG")
-  scannedBam = Rsamtools::scanBam(bamfile, param = param,
-                                   flag = Rsamtools::scanBamFlag(isDuplicate = FALSE, 
-                                                                 isUnmappedQuery = FALSE))
-  RGtags = unique(scannedBam$tag$RG)
+  scanned <- scanBam(bamfile, 
+                     param = ScanBamParam(what = c("rname", "pos"),
+                                                   tag = "RG"))[[1]]
+  RGtags = unique(scanned$tag$RG)
   
-  counts = do.call(cbind, lapply(RGtags, function(x) x$records))
-  return(0)
+  counts = do.call(cbind, lapply(RGtags, function(x) getTagCounts(x, bamfile, peaks)))
+  colnames(counts) = RGtags
+  
+  return(counts)
 }
 
 #' get counts matrix
@@ -76,19 +82,21 @@ getCountsByReadGroup <- function(bamfile, peaks){
 #' @keywords counts
 #' @export getCountsMatrix
 getCountsMatrix <- function(bamfiles, peaks, byReadGroup = FALSE){
-  peaks = peaks2GRanges(peaks)
+  peaks.gr = peaks2GRanges(peaks)
   if(byReadGroup){
-    # do nothing
+    counts_mat = getCountsByReadGroup(bamfile, peaks.gr);
+    rownames(counts_mat) = peaks$name
   }
   else{
-    counts_list = lapply(bamfiles, function(x) get_counts_from_bam(x, peaks))
+    counts_list = lapply(bamfiles, function(x) get_counts_from_bam(x, peaks.gr))
     sample_names = c(do.call(rbind, lapply(counts_list, function(x) head(toString(x$file[1])))))
     counts_mat = do.call(cbind, lapply(counts_list, function(x) x$records))
     colnames(counts_mat) = sample_names
-    rownames(counts_mat) = GenomicRanges::elementMetadata(peaks)[,1]
-    counts_info = data.frame(chrom = counts_list[[1]]$space, start = counts_list[[1]]$start, end = counts_list[[1]]$end, name = peaks$id, pValue = peaks$pVal)
+    rownames(counts_mat) = GenomicRanges::elementMetadata(peaks.gr)[,1]
+    #counts_info = data.frame(chrom = counts_list[[1]]$space, start = counts_list[[1]]$start, end = counts_list[[1]]$end, name = peaks$id, pValue = peaks$pVal)
   }
-  return(list(peaks = counts_info, ForeGroundMatrix = counts_mat))
+  peaks = peaks[,c("chrom", "start", "end", "name", "pValue")]
+  return(list(peaks = peaks, ForeGroundMatrix = counts_mat))
 }
 
 
