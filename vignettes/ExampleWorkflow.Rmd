@@ -31,9 +31,7 @@ Several of the cells have multiple runs.  We merged these runs using samtools.
 ## Obtaining and filtering counts
 
 We will use scABC to analyse the single cell data.  The cell level bam files and their samtools indexes are contained in the folder bams.
-```{r echo=FALSE}
-source("~/scRNAseqAnalysis/scATAC-RNAseq/scABC/R/read_data.R")
-```
+
 ```{r}
 # always run
 setwd("~/scRNAseqAnalysis/scATAC-RNAseq/scABC/vignettes/")
@@ -197,7 +195,6 @@ legend("bottomleft", legend = c(unique(cell.info), paste0("cluster ", 1:6)),
 Instead of all of the above commands to obtain the clustered and processed data, we can simply use the scABC command to do all of the above.
 
 ```{r cache=TRUE}
-source("~/scRNAseqAnalysis/scATAC-RNAseq/scABC/R/scABC.R")
 library(GenomicRanges)
 library(Rsamtools)
 library(WeightedCluster)
@@ -287,8 +284,8 @@ hist(width(peaks), breaks = 200)
 length(peaks)
 peaks = peaks[which(width(peaks) <= 800)]
 length(peaks)
-#peaks = resize(peaks, width = 500, fix = "center")
-#peaks = sort(peaks)
+peaks = resize(peaks, width = 500, fix = "center")
+peaks = sort(peaks)
 bamfiles = paste0("bams/", colnames(InSilicoSCABC$ForeGroundMatrix))
 frag_counts = getCounts(bamfiles, peaks, paired = FALSE, 
                          colData = data.frame(cluster.assigment = factor(InSilicoSCABC$cluster_assignments)))
@@ -299,13 +296,73 @@ motifs.matched = matchMotifs(motifs, frag_counts, genome = BSgenome.Hsapiens.UCS
 dev = computeDeviations(object = frag_counts, annotations = motifs.matched)
 dev.scores = deviationScores(dev)
 variability = computeVariability(dev)
+plotVariability(variability, use_plotly = TRUE) 
+variability[head(order(variability$variability, decreasing = TRUE), 20), ]
+tsne = deviationsTsne(dev, threshold = 1, perplexity = 10)
+tsne_plot = plotDeviationsTsne(dev, tsne, annotation = "FOSL2", 
+                                 sample_column = "cluster.assigment", shiny = FALSE)
+tsne_plot[[1]]
+tsne_plot[[2]]
+tsne_plot = plotDeviationsTsne(dev, tsne, annotation = "CTCF", 
+                                 sample_column = "cluster.assigment", shiny = FALSE)
+tsne_plot[[2]]
+tsne_plot = plotDeviationsTsne(dev, tsne, annotation = "GATA1::TAL1", 
+                                 sample_column = "cluster.assigment", shiny = FALSE)
+tsne_plot[[2]]
+top_motifs = variability$name[head(order(variability$variability, decreasing = TRUE), 20)]
+names(top_motifs) = rownames(variability[head(order(variability$variability, decreasing = TRUE), 20), ])
+top_devs = dev.scores[which(rownames(dev.scores) %in% names(top_motifs)), ]
+rownames(top_devs) = top_motifs[match(rownames(top_devs), names(top_motifs))]
+library(gplots) 
+library(RColorBrewer)
+scalebluered <- colorRampPalette(c("blue", "white", "red"), space = "rgb")(256)
+cols = brewer.pal(6, "Dark2")[1:6]
+cols = cols[c(6, 1, 4, 2, 5, 3)] # reorder to agree with Zhi's figure
+rowcols = cols[InSilicoSCABC$cluster_assignments]
+library(vegan)
+d = vegdist(top_devs, method = "euclidean")
+col.clus = hclust(d, "centroid")
+heatmap.2(t(top_devs), dendrogram='none', Rowv=FALSE, Colv=as.dendrogram(col.clus), trace='none', col = scalebluered, density.info = "none", RowSideColors = rowcols, margin = c(10, 1))
 ```
 
-Now we'll look at the TF motifs within cluster specific peaks.
+Most of the TFs are BJ specific. Let's look at when we take cluster specific peaks, but an equal number of each cluster.
 
 ```{r}
-
+topPeaks = peaks[which(apply(elementMetadata(peaks), 1, min) < 1e-5)]
+fragCountsTopPeaks = getCounts(bamfiles, topPeaks, paired = FALSE, 
+                         colData = data.frame(cluster.assigment = factor(InSilicoSCABC$cluster_assignments)))
+fragCountsTopPeaks = addGCBias(fragCountsTopPeaks, genome = BSgenome.Hsapiens.UCSC.hg19)
+motifs <- getJasparMotifs()
+motifsTopPeaks.matched = matchMotifs(motifs, fragCountsTopPeaks, genome = BSgenome.Hsapiens.UCSC.hg19)
+devTopPeaks = computeDeviations(object = fragCountsTopPeaks, annotations = motifsTopPeaks.matched)
+devTopPeaks.scores = deviationScores(devTopPeaks)
+variabilityTopPeaks = computeVariability(devTopPeaks)
+plotVariability(variabilityTopPeaks, use_plotly = TRUE) 
+variabilityTopPeaks[head(order(variabilityTopPeaks$variability, decreasing = TRUE), 20), ]
+intersect(variabilityTopPeaks$name[head(order(variabilityTopPeaks$variability, decreasing = TRUE), 20)], variability$name[head(order(variability$variability, decreasing = TRUE), 20)])
 ```
+
+A large number intersect, which is good.
+
+```{r cache=TRUE}
+topMotifsTopPeaks = variabilityTopPeaks$name[head(order(variabilityTopPeaks$variability, decreasing = TRUE), 20)]
+names(topMotifsTopPeaks) = rownames(variabilityTopPeaks[head(order(variabilityTopPeaks$variability, decreasing = TRUE), 20), ])
+topDevsTopPeaks = devTopPeaks.scores[which(rownames(devTopPeaks.scores) %in% names(topMotifsTopPeaks)), ]
+rownames(topDevsTopPeaks) = topMotifsTopPeaks[match(rownames(topDevsTopPeaks), names(topMotifsTopPeaks))]
+topDevsTopPeaks[which(is.na(topDevsTopPeaks))] = 0
+library(gplots) 
+library(RColorBrewer)
+scalebluered <- colorRampPalette(c("blue", "white", "red"), space = "rgb")(256)
+cols = brewer.pal(6, "Dark2")[1:6]
+cols = cols[c(6, 1, 4, 2, 5, 3)] # reorder to agree with Zhi's figure
+rowcols = cols[InSilicoSCABC$cluster_assignments]
+library(vegan)
+d = vegdist(topDevsTopPeaks, method = "euclidean")
+col.clus = hclust(d, "centroid")
+heatmap.2(t(topDevsTopPeaks), dendrogram='none', Rowv=FALSE, Colv=as.dendrogram(col.clus), trace='none', col = scalebluered, density.info = "none", RowSideColors = rowcols, margin = c(10, 1))
+```
+
+In the cluster specific peaks the Jun family motifs in BJ are still present, but now we see the Gata1-Tal1 motif in K562 cells (see https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3431495/ or http://mcb.asm.org/content/25/4/1215.full) and Pou motifs in H1 (espcially Pou3f2, aka Oct4).
 
 # Session Info
 
