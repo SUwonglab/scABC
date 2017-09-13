@@ -362,7 +362,7 @@ col.clus = hclust(d, "centroid")
 heatmap.2(t(topDevsTopPeaks), dendrogram='none', Rowv=FALSE, Colv=as.dendrogram(col.clus), trace='none', col = scalebluered, density.info = "none", RowSideColors = rowcols, margin = c(10, 1))
 ```
 
-In the cluster specific peaks the Jun family motifs in BJ are still present, but now we see the Gata1-Tal1 motif in K562 cells (see https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3431495/ or http://mcb.asm.org/content/25/4/1215.full) and Pou motifs in H1 (espcially Pou3f2, aka Oct4).
+In the cluster specific peaks the Jun family motifs in BJ are still present, but now we see the Gata1-Tal1 motif in K562 cells (see https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3431495/ or http://mcb.asm.org/content/25/4/1215.full) and Pou motifs in H1 cells (espcially Pou3f2, aka Oct4).
 
 # Session Info
 
