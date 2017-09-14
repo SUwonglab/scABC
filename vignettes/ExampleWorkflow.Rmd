@@ -15,7 +15,7 @@ We used Kundaje pipeline for aligning pair ended reads to hg19 and removing dupl
 ```{r engine='bash', eval=FALSE}
 bds_scr [SCR_NAME] atac.bds -align -species hg19 -species_file [SPECIES_FILE_PATH] -nth [NUM_THREADS] -fastq1_1 [READ_PAIR1] -fastq1_2 [READ_PAIR2]
 ```
-For details on the pipeline, visit the Kundaje lab website or github page.
+For details on the pipeline, visit the Kundaje lab website or github page (https://github.com/kundajelab/atac_dnase_pipelines).
 
 The resulting bam files were merged using samtools.
 ```{r engine='bash', eval=FALSE}
@@ -266,8 +266,7 @@ To identify transcription factors active in cluster specific peaks we'll use chr
 
 First we'll look at the naive application of chromVAR without selecting for cluster specific peaks
 
-```{r cache=TRUE, message=FALSE}
-#
+```{r message=FALSE}
 ClusterSpecificPeaks = data.frame(chrom = InSilicoSCABC$peaks$chrom, start = InSilicoSCABC$peaks$start, end = InSilicoSCABC$peaks$end, cluster1pvals = InSilicoSCABC$PeakPVals[,1], cluster2pvals = InSilicoSCABC$PeakPVals[,2], cluster3pvals = InSilicoSCABC$PeakPVals[,3], cluster4pvals = InSilicoSCABC$PeakPVals[,4], cluster5pvals = InSilicoSCABC$PeakPVals[,5], cluster6pvals = InSilicoSCABC$PeakPVals[,6])
 dim(ClusterSpecificPeaks)
 write.table(ClusterSpecificPeaks, file = "InSilicoPeaksWithPvals.txt", sep = "\t", quote = FALSE, col.names = FALSE, row.names = FALSE)
@@ -327,8 +326,9 @@ heatmap.2(t(top_devs), dendrogram='none', Rowv=FALSE, Colv=as.dendrogram(col.clu
 
 Most of the TFs are BJ specific. Let's look at when we take cluster specific peaks, but an equal number of each cluster.
 
-```{r cache=TRUE, message=FALSE}
-topPeaks = peaks[which(apply(elementMetadata(peaks), 1, min) < 1e-5)]
+```{r message=FALSE}
+# set threshhold to bonferroni corrected 0.05 FWER, 0.05/length(peaks) ~ 2e-6
+topPeaks = peaks[which(apply(elementMetadata(peaks), 1, min) < 1e-6)]
 fragCountsTopPeaks = getCounts(bamfiles, topPeaks, paired = FALSE, 
                          colData = data.frame(cluster.assigment = factor(InSilicoSCABC$cluster_assignments)))
 fragCountsTopPeaks = addGCBias(fragCountsTopPeaks, genome = BSgenome.Hsapiens.UCSC.hg19)
@@ -349,7 +349,8 @@ tsne_plot[[1]]
 
 A large number intersect, which is good.
 
-```{r cache=TRUE}
+```{r}
+
 topMotifsTopPeaks = variabilityTopPeaks$name[head(order(variabilityTopPeaks$variability, decreasing = TRUE), 20)]
 names(topMotifsTopPeaks) = rownames(variabilityTopPeaks[head(order(variabilityTopPeaks$variability, decreasing = TRUE), 20), ])
 topDevsTopPeaks = devTopPeaks.scores[which(rownames(devTopPeaks.scores) %in% names(topMotifsTopPeaks)), ]
@@ -367,7 +368,7 @@ col.clus = hclust(d, "centroid")
 heatmap.2(t(topDevsTopPeaks), dendrogram='none', Rowv=FALSE, Colv=as.dendrogram(col.clus), trace='none', col = scalebluered, density.info = "none", RowSideColors = rowcols, margin = c(10, 1))
 ```
 
-In the cluster specific peaks the Jun family motifs in BJ are still present, but now we see the Gata1-Tal1 motif in K562 cells (see https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3431495/ or http://mcb.asm.org/content/25/4/1215.full) and Pou motifs in H1 cells (espcially Pou3f2, aka Oct4).
+In the cluster specific peaks the Jun family motifs in BJ are still present, but now we see the Gata1-Tal1 motif in K562 cells (see https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3431495/ or http://mcb.asm.org/content/25/4/1215.full), Spi1 motif in TF-1 (http://www.jbc.org/content/268/11/7923.short), and Pou motifs in H1 cells (espcially Pou3f2, aka Oct4).
 
 # Session Info
 
