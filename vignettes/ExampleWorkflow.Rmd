@@ -266,7 +266,7 @@ To identify transcription factors active in cluster specific peaks we'll use chr
 
 First we'll look at the naive application of chromVAR without selecting for cluster specific peaks
 
-```{r cache=TRUE}
+```{r cache=TRUE, message=FALSE}
 #
 ClusterSpecificPeaks = data.frame(chrom = InSilicoSCABC$peaks$chrom, start = InSilicoSCABC$peaks$start, end = InSilicoSCABC$peaks$end, cluster1pvals = InSilicoSCABC$PeakPVals[,1], cluster2pvals = InSilicoSCABC$PeakPVals[,2], cluster3pvals = InSilicoSCABC$PeakPVals[,3], cluster4pvals = InSilicoSCABC$PeakPVals[,4], cluster5pvals = InSilicoSCABC$PeakPVals[,5], cluster6pvals = InSilicoSCABC$PeakPVals[,6])
 dim(ClusterSpecificPeaks)
@@ -327,7 +327,7 @@ heatmap.2(t(top_devs), dendrogram='none', Rowv=FALSE, Colv=as.dendrogram(col.clu
 
 Most of the TFs are BJ specific. Let's look at when we take cluster specific peaks, but an equal number of each cluster.
 
-```{r}
+```{r cache=TRUE, message=FALSE}
 topPeaks = peaks[which(apply(elementMetadata(peaks), 1, min) < 1e-5)]
 fragCountsTopPeaks = getCounts(bamfiles, topPeaks, paired = FALSE, 
                          colData = data.frame(cluster.assigment = factor(InSilicoSCABC$cluster_assignments)))
@@ -340,6 +340,11 @@ variabilityTopPeaks = computeVariability(devTopPeaks)
 plotVariability(variabilityTopPeaks, use_plotly = TRUE) 
 variabilityTopPeaks[head(order(variabilityTopPeaks$variability, decreasing = TRUE), 20), ]
 intersect(variabilityTopPeaks$name[head(order(variabilityTopPeaks$variability, decreasing = TRUE), 20)], variability$name[head(order(variability$variability, decreasing = TRUE), 20)])
+
+tsneTopPeaks = deviationsTsne(devTopPeaks, threshold = 1, perplexity = 10)
+tsneTopPeaks_plot = plotDeviationsTsne(devTopPeaks, tsneTopPeaks, annotation = "FOSL2", 
+                                 sample_column = "cluster.assigment", shiny = FALSE)
+tsne_plot[[1]]
 ```
 
 A large number intersect, which is good.
