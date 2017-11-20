@@ -160,11 +160,11 @@ rowcols1 = rcols1[cell.info]
 rcols2 = brewer.pal(6, "Dark2")[1:6]
 rowcols2 = rcols2[InSilicoLandMarkAssignments]
 rowcols = rbind(rowcols1, rowcols2)
-rownames(rowcols) = c("rep info", "cluster")
+rownames(rowcols) = c("cell type", "cluster")
 x = t(InSilicoForeGround)
 x = x[ ,head(order(rowSums(InSilicoForeGround), decreasing = TRUE), 10000)]
 d = as.dist(1 - cor(x, method = "spearman"))
-col.clus = hclust(d, method ="average")
+col.clus = hclust(d, method ="complete")
 #truncate to see patterns
 x[which(x > 5)] = 5
 heatmap.3(x, dendrogram='none', Rowv=FALSE, Colv=col.clus, trace='none', col = scalered, 
@@ -178,17 +178,17 @@ We'll select the cluster specific peaks by selecting the 10,000 peaks with the s
 ```{r cache=TRUE}
 # cluster specific peaks
 ClusterSpecificPeaks = head(order(apply(InSilicoPeakPvals, 1, min), 
-                                  decreasing = FALSE), 10000)
+                                  decreasing = FALSE), 30000)
 length(ClusterSpecificPeaks)
 x = t(InSilicoForeGround[ClusterSpecificPeaks, ])
 d = as.dist(1 - cor(x, method = "spearman"))
-col.clus = hclust(d, method ="average")
+col.clus = hclust(d, method ="complete")
 #truncate to see patterns
 x[which(x > 5)] = 5
 heatmap.3(x, dendrogram='none', Rowv=FALSE, Colv=as.dendrogram(col.clus), trace='none', 
           col = scalered, margin = c(5, 5), density.info = "none", RowSideColors = rowcols,
           RowSideColorsSize=2, main = "Cluster specific peaks")
-legend("bottomleft", legend = c(unique(cell.info), paste0("cluster ", 1:6)), 
+legend("bottomleft", legend = c(unique(sapply(cell.info, toString)), paste0("cluster ", 1:6)), 
        col = c(rcols1, rcols2), border=FALSE, bty="n", y.intersp = 0.7, cex=0.7, pch = 15)
 ```
 
@@ -360,7 +360,7 @@ library(gplots)
 library(RColorBrewer)
 scalebluered <- colorRampPalette(c("blue", "white", "red"), space = "rgb")(256)
 cols = brewer.pal(6, "Dark2")[1:6]
-cols = cols[c(6, 1, 4, 2, 5, 3)] # reorder to agree with Zhi's figure
+cols = cols[c(6, 2, 1, 5, 3, 4)] # reorder to agree with Zhi's figure
 rowcols = cols[InSilicoSCABC$cluster_assignments]
 library(vegan)
 d = vegdist(topDevsTopPeaks, method = "euclidean")

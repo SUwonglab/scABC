@@ -155,7 +155,7 @@ filterSamples <- function(ForeGround, BackGround, readsFGthresh=NULL){
 #' @param ncells_thresh threshold of the number of cells
 #' @return filtered ForeGround and peaks
 #' @export filterPeaks
-filterPeaks <- function(ForeGround, peaks, nreads_thresh = 2, ncells_thresh = 10){
+filterPeaks <- function(ForeGround, peaks, nreads_thresh = 1, ncells_thresh = 10){
   which_peaks_pass = which(rowSums(ForeGround[,4:dim(ForeGround)[2]] >= nreads_thresh) >= ncells_thresh)
   return(list(ForeGroundMatrix = ForeGround[which_peaks_pass,], peaks = peaks[which_peaks_pass, ]))
 }
