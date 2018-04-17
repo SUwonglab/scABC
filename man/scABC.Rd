@@ -49,7 +49,7 @@ scABC(bamfiles, peakfile, byReadGroup = FALSE, PLOT = TRUE, QUIET = TRUE,
 a list of the processed ForeGround, peaks, number of clusters, cluster assignments, landmarks, and peak p values
 }
 \description{
-scABC
+Core function of the scABC package.  Does processing, clustering, and peak p-value calculation in one step.
 }
 \examples{
 

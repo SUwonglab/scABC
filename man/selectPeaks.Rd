@@ -13,6 +13,6 @@ selectPeaks(filename, thresh = 2)
 significant peaks obtained by filtering by p-value
 }
 \description{
-select peaks
+read in peaks into a table and select only those with MACS2 pValue > 1 (p < 0.1)
 }
 \keyword{peaks}

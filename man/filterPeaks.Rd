@@ -4,7 +4,7 @@
 \alias{filterPeaks}
 \title{filter peaks}
 \usage{
-filterPeaks(ForeGround, peaks, nreads_thresh = 2, ncells_thresh = 10)
+filterPeaks(ForeGround, peaks, nreads_thresh = 1, ncells_thresh = 10)
 }
 \arguments{
 \item{ForeGround}{matrix or data frame of Foreground values}
