@@ -168,6 +168,7 @@ getBackground <- function(bamfiles, peaks, upstream = 500000,
 #' @return a matrix of chrom, start, end of peaks followed by counts of each bam file in bamfiles
 #' @import Rsamtools 
 #' @import GenomicRanges
+#' @import IRanges
 #' @keywords peaks
 #' @keywords counts
 #' @export getCountsMatrix2
@@ -206,6 +207,7 @@ getCountsMatrix2 <- function(bamfiles, peaks, PAIRED = FALSE,
 #' @return a matrix of chrom, start, end of peaks followed by background counts for each bam file in bamfiles
 #' @import Rsamtools
 #' @import GenomicRanges
+#' @import IRanges
 #' @export getBackground2
 getBackground2 <- function(bamfiles, peaks, upstream = 500000, 
                           downstream = 500000, byReadGroup = FALSE, 
