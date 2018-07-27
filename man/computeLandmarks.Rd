@@ -4,13 +4,15 @@
 \alias{computeLandmarks}
 \title{compute landmarks}
 \usage{
-computeLandmarks(ForeGround, BackGround, nCluster = 2, lambda = 0.1,
-  nTop = 2000)
+computeLandmarks(ForeGround, BackGround = NULL, weights = NULL,
+  nCluster = 2, lambda = 0.1, nTop = 2000)
 }
 \arguments{
 \item{ForeGround}{matrix or data frame of Foreground values}
 
-\item{BackGround}{matrix or data frame of BackGround values}
+\item{BackGround}{matrix or data frame of BackGround values, one of BackGround or weights must be provided}
+
+\item{weights}{a vector of weights to use for clustering, one of BackGround or weights must be provided}
 
 \item{nCluster}{number of clusters (default = 2)}
 
