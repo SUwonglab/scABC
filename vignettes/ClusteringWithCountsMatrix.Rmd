@@ -1,0 +1,48 @@
+---
+title: "Using scABC with a counts matrix"
+author: "Timothy Daley"
+date: "7/27/2018"
+output: html_document
+---
+
+Our goal in this document is to detail how to use the scABC package using only the counts matrix.  The primary issue is that we don't have access to the background to compute the weights in the clustering procedure.  Instead we can use the foreground to compute the weights.  This changes a bit since the foreground is much sparser than the background.  Instead of using the median of the background, we'll use the mean of the foreground.  Using the median of the foreground generally results in all zeros, and we can't weight by zeros.
+
+
+```{r}
+library(scABC)
+InSilicoSCABCForeGroundMatrix = read.table(file = "InSilicoSCABCForeGroundMatrix.txt", header = TRUE)
+weights = apply(InSilicoSCABCForeGroundMatrix, 2, mean)
+InSilicoSCABCLandmarksWithoutBam = computeLandmarks(InSilicoSCABCForeGroundMatrix, weights = weights, nCluster = 6, nTop = 5000)
+cor(InSilicoSCABCLandmarksWithoutBam, InSilicoSCABCLandmarksWithoutBam, method = 'spearman')
+
+InSilicoClusterAssignments = read.table(file = "InSilicoClusterAssignments.txt", header = TRUE)
+
+InSilicoLandMarkAssignmentsWithoutBam = assign2landmarks(InSilicoSCABCForeGroundMatrix, InSilicoSCABCLandmarksWithoutBam)
+pander::pander(table(InSilicoLandMarkAssignmentsWithoutBam, InSilicoClusterAssignments[,3]))
+InSilicoCell2LandmarkCorrelation = cbind(apply(InSilicoSCABCForeGroundMatrix, 2, function(x) cor(x, InSilicoSCABCLandmarksWithoutBam[,1], method = 'spearman')), 
+                                         apply(InSilicoSCABCForeGroundMatrix, 2, function(x) cor(x, InSilicoSCABCLandmarksWithoutBam[,2], method = 'spearman')), 
+                                         apply(InSilicoSCABCForeGroundMatrix, 2, function(x) cor(x, InSilicoSCABCLandmarksWithoutBam[,3], method = 'spearman')), 
+                                         apply(InSilicoSCABCForeGroundMatrix, 2, function(x) cor(x, InSilicoSCABCLandmarksWithoutBam[,4], method = 'spearman')), 
+                                         apply(InSilicoSCABCForeGroundMatrix, 2, function(x) cor(x, InSilicoSCABCLandmarksWithoutBam[,5], method = 'spearman')), 
+                                         apply(InSilicoSCABCForeGroundMatrix, 2, function(x) cor(x, InSilicoSCABCLandmarksWithoutBam[,6], method = 'spearman')))
+cell.info = InSilicoClusterAssignments[ ,3]
+library(gplots) 
+library(RColorBrewer)
+library(devtools)
+source("~/Scripts/R/heatmap.3.R")
+scalered <- colorRampPalette(c("white", "red"), space = "rgb")(256)
+rcols1 = brewer.pal(6, "Accent")[1:6]
+rowcols1 = rcols1[cell.info]
+rcols2 = brewer.pal(6, "Dark2")[1:6]
+rowcols2 = rcols2[InSilicoLandMarkAssignmentsWithoutBam]
+rowcols = rbind(rowcols1, rowcols2)
+rownames(rowcols) = c("rep info", "cluster")
+heatmap.3(InSilicoCell2LandmarkCorrelation, dendrogram='none', Rowv=FALSE, Colv=FALSE,
+          trace='none', col = scalered, margin = c(5, 5), density.info = "none", 
+          RowSideColors = rowcols, RowSideColorsSize=2, symm=F,symkey=F,
+          symbreaks=F, scale="none")
+legend("bottomleft", legend = c(unique(cell.info), paste0("cluster ", 1:6)), col = c(rcols1, rcols2), border=FALSE, bty="n", y.intersp = 0.7, cex=0.7, pch = 15)
+```
+
+As we can see, the clustering is very good with this method.  We will test this further in the future to make sure that it's a good idea.
+
