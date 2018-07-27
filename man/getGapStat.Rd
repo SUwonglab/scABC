@@ -10,13 +10,13 @@ getGapStat(ForeGround, BackGroundMedian, nClusters = 1:10, nPerm = 20,
 \arguments{
 \item{ForeGround}{matrix or data frame of ForeGround values}
 
+\item{BackGroundMedian}{median of background values to compute weighting}
+
 \item{nClusters}{vector of clusters to try, default: 1:10}
 
 \item{nPerm}{number of permutation to perform, default: 10}
 
 \item{nTop}{the number of top features to use in the clustering}
-
-\item{BackGround}{matrix or data frame of BackGround values}
 }
 \value{
 list of gap stat stuff

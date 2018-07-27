@@ -5,7 +5,7 @@
 \title{compute landmarks}
 \usage{
 computeLandmarks(ForeGround, BackGround = NULL, weights = NULL,
-  nCluster = 2, lambda = 0.1, nTop = 2000)
+  nCluster = 2, lambda = 0.1, nTop = 5000)
 }
 \arguments{
 \item{ForeGround}{matrix or data frame of Foreground values}
@@ -18,7 +18,7 @@ computeLandmarks(ForeGround, BackGround = NULL, weights = NULL,
 
 \item{lambda}{weighting parameter (default = 0.1)}
 
-\item{nTop}{number of top clusters}
+\item{nTop}{number of top clusters (default = 5000)}
 }
 \description{
 compute landmarks

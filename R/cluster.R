@@ -12,23 +12,30 @@ select_top <-function(x, n_top){
 #' @param weights a vector of weights to use for clustering, one of BackGround or weights must be provided
 #' @param nCluster number of clusters (default = 2)
 #' @param lambda weighting parameter (default = 0.1)
-#' @param nTop number of top clusters
+#' @param nTop number of top clusters (default = 5000)
 #' @import WeightedCluster 
 #' @export computeLandmarks
-computeLandmarks <- function(ForeGround, BackGround = NULL, weights = NULL, nCluster = 2, lambda = 0.1, nTop = 2000){
+computeLandmarks <- function(ForeGround, BackGround = NULL, weights = NULL, nCluster = 2, lambda = 0.1, nTop = 5000){
   # check types
   stopifnot(is.matrix(ForeGround) || is.data.frame(ForeGround))
   stopifnot(!is.null(BackGround) || !is.null(weights))
   stopifnot(is.numeric(nCluster))
+  if(!is.null(BackGround)){
+    stopifnot(dim(ForeGround) == dim(BackGround))
+  }
+  else{
+    stopifnot(dim(ForeGround)[2] == length(weights))
+  }
+    
   # ensure both are matrices
   ForeGround = as.matrix(ForeGround);
   if(!is.null(BackGround)){
     BackGround = as.matrix(BackGround);
     weights = apply(BackGround, 2, median);
-    c = min(8, median(BGmedian));
+    c = min(8, median(weights));
   }
   else{
-    c = min(8, median(apply(ForeGround, 2, median)))
+    c = min(8, median(weights))
   }
   # compute weighted k-medioids
   FGdist = 1 - cor(ForeGround, method = "spearman");
@@ -327,7 +334,7 @@ getContrast <- function(nCluster){
 
 #' get gap statistic and choose best cluster
 #' @param ForeGround matrix or data frame of ForeGround values
-#' @param BackGround matrix or data frame of BackGround values
+#' @param BackGroundMedian median of background values to compute weighting
 #' @param nClusters vector of clusters to try, default: 1:10
 #' @param nPerm number of permutation to perform, default: 10
 #' @param nTop the number of top features to use in the clustering
