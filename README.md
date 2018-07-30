@@ -13,5 +13,7 @@ The easiest and quickest way to install scABC is by using the 'install_github' f
 devtools::install_github("timydaley/scABC")
 ```
 
+Full details for usage are contained in the vignettes.
+
 
 
