@@ -1,48 +1,98 @@
 ---
 title: "Using scABC with a counts matrix"
-author: "Timothy Daley"
+author: "Timothy Daley and Mahdi Zamanighomi"
 date: "7/27/2018"
 output: html_document
 ---
 
-Our goal in this document is to detail how to use the scABC package using only the counts matrix.  The primary issue is that we don't have access to the background to compute the weights in the clustering procedure.  Instead we can use the foreground to compute the weights.  This changes a bit since the foreground is much sparser than the background.  Instead of using the median of the background, we'll use the mean of the foreground.  Using the median of the foreground generally results in all zeros, and we can't weight by zeros.
-
+Our goal in this document is to detail how to use the scABC package using only the counts matrix. The primary issue is that we don't have access to the background to compute the weights in the clustering procedure. Instead we can use the foreground to compute the weights.  This changes a bit since the foreground is much sparser than the background. Instead of using the median of the background, we'll use the mean of the foreground. Using the median of the foreground generally results in all zeros, and we can't weight by zeros. Moreover, we apply stricter conditions to filter out low-depth cells since mean does not well reflect the quality of samples, which may lead to some convergence problem in calling cluster specific peaks.
 
 ```{r}
 library(scABC)
-InSilicoSCABCForeGroundMatrix = read.table(file = "InSilicoSCABCForeGroundMatrix.txt", header = TRUE)
+InSilicoSCABCForeGroundMatrix = read.table(file = "~/scRNAseqAnalysis/scATAC-RNAseq/scABC/vignettes/InSilicoSCABCForeGroundMatrix.txt", header = TRUE)
+InSilicoSCABCPeaks = read.table(file = "~/scRNAseqAnalysis/scATAC-RNAseq/scABC/vignettes/InSilicoSCABCPeaks.bed", header = TRUE) # same order as rows in InSilicoSCABCForeGroundMatrix
+
+# always filter out low-represented peaks 
+InSilicoSCABCForeGroundMatrixPeaksFiltered = filterPeaks(InSilicoSCABCForeGroundMatrix, InSilicoSCABCPeaks, nreads_thresh = 2, ncells_thresh = 10) # keep peaks with minimum 2 reads in at least 10 cells
+
+# always filter out low-represented samples 
+InSilicoSCABCForeGroundMatrixSamplesFiltered = filterSamples(ForeGround = InSilicoSCABCForeGroundMatrixPeaksFiltered$ForeGroundMatrix, BackGround = matrix(nrow = dim(InSilicoSCABCForeGroundMatrixPeaksFiltered$ForeGroundMatrix)[1], ncol = dim(InSilicoSCABCForeGroundMatrixPeaksFiltered$ForeGroundMatrix)[2]), readsFGthresh = 1000) # manually set "readsFGthresh" to 1000 (minimum number of reads in each cell across all peaks). BackGround with all elements equal to NAs since BackGround is not available
+
+# filtered foreground matrix and peaks
+InSilicoSCABCForeGroundMatrix = InSilicoSCABCForeGroundMatrixSamplesFiltered$ForeGroundMatrix
+InSilicoSCABCPeaks = InSilicoSCABCForeGroundMatrixPeaksFiltered$peaks
+
+# define weights to compute landmarks
 weights = apply(InSilicoSCABCForeGroundMatrix, 2, mean)
 InSilicoSCABCLandmarksWithoutBam = computeLandmarks(InSilicoSCABCForeGroundMatrix, weights = weights, nCluster = 6, nTop = 5000)
 cor(InSilicoSCABCLandmarksWithoutBam, InSilicoSCABCLandmarksWithoutBam, method = 'spearman')
 
-InSilicoClusterAssignments = read.table(file = "InSilicoClusterAssignments.txt", header = TRUE)
+# true cluster assignments
+InSilicoClusterAssignments = read.table(file = "~/scRNAseqAnalysis/K562vsHL60scATACandRNAseq/SRX&Type&Batch.txt")
+InSilicoClusterAssignments = InSilicoClusterAssignments[match(colnames(InSilicoSCABCForeGroundMatrix), paste0(InSilicoClusterAssignments[,1], ".bam")),]
 
+# clustering results
 InSilicoLandMarkAssignmentsWithoutBam = assign2landmarks(InSilicoSCABCForeGroundMatrix, InSilicoSCABCLandmarksWithoutBam)
-pander::pander(table(InSilicoLandMarkAssignmentsWithoutBam, InSilicoClusterAssignments[,3]))
+pander::pander(table(InSilicoLandMarkAssignmentsWithoutBam, InSilicoClusterAssignments[,2]))
+
+# assigning landmarks to cells
 InSilicoCell2LandmarkCorrelation = cbind(apply(InSilicoSCABCForeGroundMatrix, 2, function(x) cor(x, InSilicoSCABCLandmarksWithoutBam[,1], method = 'spearman')), 
                                          apply(InSilicoSCABCForeGroundMatrix, 2, function(x) cor(x, InSilicoSCABCLandmarksWithoutBam[,2], method = 'spearman')), 
                                          apply(InSilicoSCABCForeGroundMatrix, 2, function(x) cor(x, InSilicoSCABCLandmarksWithoutBam[,3], method = 'spearman')), 
                                          apply(InSilicoSCABCForeGroundMatrix, 2, function(x) cor(x, InSilicoSCABCLandmarksWithoutBam[,4], method = 'spearman')), 
                                          apply(InSilicoSCABCForeGroundMatrix, 2, function(x) cor(x, InSilicoSCABCLandmarksWithoutBam[,5], method = 'spearman')), 
                                          apply(InSilicoSCABCForeGroundMatrix, 2, function(x) cor(x, InSilicoSCABCLandmarksWithoutBam[,6], method = 'spearman')))
-cell.info = InSilicoClusterAssignments[ ,3]
+cell.info = InSilicoClusterAssignments[ ,2]
+
+# colors
 library(gplots) 
 library(RColorBrewer)
 library(devtools)
-source("~/Scripts/R/heatmap.3.R")
+source_url("https://raw.githubusercontent.com/obigriffith/biostar-tutorials/master/Heatmaps/heatmap.3.R")
 scalered <- colorRampPalette(c("white", "red"), space = "rgb")(256)
+
+# heatmap colors
 rcols1 = brewer.pal(6, "Accent")[1:6]
 rowcols1 = rcols1[cell.info]
 rcols2 = brewer.pal(6, "Dark2")[1:6]
 rowcols2 = rcols2[InSilicoLandMarkAssignmentsWithoutBam]
 rowcols = rbind(rowcols1, rowcols2)
 rownames(rowcols) = c("rep info", "cluster")
-heatmap.3(InSilicoCell2LandmarkCorrelation, dendrogram='none', Rowv=FALSE, Colv=FALSE,
+
+# normalize each row in the landmark correlation matrix for a better visualization
+Normalization = rowMeans(abs(InSilicoCell2LandmarkCorrelation))
+InSilicoCell2LandmarkCorrelationNormalized = InSilicoCell2LandmarkCorrelation/Normalization
+InSilicoCell2LandmarkCorrelationNormalized[InSilicoCell2LandmarkCorrelationNormalized<0] = 0
+
+# plot heatmap
+heatmap.3(InSilicoCell2LandmarkCorrelationNormalized, dendrogram='none', Rowv=FALSE, Colv=FALSE,
           trace='none', col = scalered, margin = c(5, 5), density.info = "none", 
           RowSideColors = rowcols, RowSideColorsSize=2, symm=F,symkey=F,
           symbreaks=F, scale="none")
-legend("bottomleft", legend = c(unique(cell.info), paste0("cluster ", 1:6)), col = c(rcols1, rcols2), border=FALSE, bty="n", y.intersp = 0.7, cex=0.7, pch = 15)
+legend("bottomleft", legend = c(as.character(unique(cell.info)), paste0("cluster ", 1:6)), col = c(rcols1[unique(cell.info)], rcols2), border=FALSE, bty="n", y.intersp = 0.7, cex=0.7, pch = 15)
 ```
 
-As we can see, the clustering is very good with this method.  We will test this further in the future to make sure that it's a good idea.
+As we can see, the clustering is very good with this method. To obtain cluster specific peaks, we will set all cell weights to 10 (i.e. sample quality for all cells are good and equal) since the mean of the foreground leads to very small values that are not suitable for calling cluster specific peaks (MLE/MAP will not converge). Note that we applied a high threshold to filter out shallow depth cells (readsFGthresh = 1000) and thus assume all cells have good quality.
 
+```{r cache=TRUE}
+# cluster specific peaks
+PeakSelection = getClusterSpecificPvalue(ForeGround=InSilicoSCABCForeGroundMatrix, cluster_assignments = InSilicoLandMarkAssignmentsWithoutBam, background_medians = rep(10,dim(InSilicoSCABCForeGroundMatrix)[2])) # cell weights equal to 10 for all cells. If MLE/MAP does not converge, increase "readsFGthresh" to higher thresholds and if neccessary, increase cell weights to a higher nember as well
+PeakPvals = PeakSelection$pvalue
+
+# the top 200 cluster specific peaks for each cluster.
+Diff_peaks = apply(PeakPvals, 2, function(x) order(x))
+Diff_peaks_union = numeric(length=0)
+for (i in 1:max(InSilicoLandMarkAssignmentsWithoutBam)){
+  Diff_peaks_union = c(Diff_peaks[1:200,i],Diff_peaks_union)
+}
+x = t(InSilicoSCABCForeGroundMatrix[Diff_peaks_union,])
+x[which(x > 5)] = 5
+
+# plot heatmap
+heatmap.3(x, dendrogram='none', Rowv=FALSE, Colv=FALSE, trace='none', col = scalered, 
+          margin = c(5, 5), density.info = "none", RowSideColors = rowcols, 
+          RowSideColorsSize=2, main = "Cluster specific peaks")
+legend("bottomleft", legend = c(as.character(unique(cell.info)), paste0("cluster ", 1:6)), col = c(rcols1[unique(cell.info)], rcols2), border=FALSE, bty="n", y.intersp = 0.7, cex=0.7, pch = 15)
+```
+
+We will examine the above considerations further in the future to ensure that scABC results are accurate.
