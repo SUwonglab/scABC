@@ -176,8 +176,7 @@ getCountsMatrix2 <- function(bamfiles, peaks, PAIRED = FALSE,
                              byReadGroup = FALSE, VERBOSE = FALSE){
   peaks.gr = peaks2GRanges(peaks)
   if(byReadGroup){
-    bamfile = bamfiles
-    counts_mat = getCountsByReadGroup2(bamfile, peaks.gr);
+    counts_mat = getCountsByReadGroup2(bamfiles, peaks.gr);
     rownames(counts_mat) = peaks$name
   }
   else{
