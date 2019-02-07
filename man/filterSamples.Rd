@@ -7,9 +7,9 @@
 filterSamples(ForeGround, BackGround, readsFGthresh = NULL)
 }
 \arguments{
-\item{ForeGround}{matrix or data frame of ForeGround values}
+\item{ForeGround}{sparse matrix of ForeGround values}
 
-\item{BackGround}{matrix or data frame of BackGround values}
+\item{BackGround}{sparse of BackGround values}
 
 \item{readsFGthresh}{threshold for the total reads per cell in ForeGround. Default is min(500, number of peaks/50)}
 }

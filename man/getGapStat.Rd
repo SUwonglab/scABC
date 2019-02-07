@@ -8,7 +8,7 @@ getGapStat(ForeGround, BackGroundMedian, nClusters = 1:10, nPerm = 20,
   nTop = 5000, quiet = FALSE)
 }
 \arguments{
-\item{ForeGround}{matrix or data frame of ForeGround values}
+\item{ForeGround}{sparse matrix ForeGround values}
 
 \item{BackGroundMedian}{median of background values to compute weighting}
 

@@ -4,10 +4,10 @@
 \alias{scABC}
 \title{scABC}
 \usage{
-scABC(bamfiles, peakfile, byReadGroup = FALSE, PLOT = TRUE, QUIET = TRUE,
-  nClusters = c(), pValThresh = 2, nreadsThresh = 2, ncellsThresh = 10,
-  readsFGthresh = NULL, lambda = 1, nTop = 2000, nPerm = 20,
-  nTopGapStat = 5000, maxiter = 1000, thresMLE = 10^-3,
+scABC(bamfiles, peakfile, byReadGroup = FALSE, PLOT = TRUE,
+  QUIET = TRUE, nClusters = c(), pValThresh = 2, nreadsThresh = 2,
+  ncellsThresh = 10, readsFGthresh = NULL, lambda = 1, nTop = 2000,
+  nPerm = 20, nTopGapStat = 5000, maxiter = 1000, thresMLE = 10^-3,
   thresMAP = 10^-5)
 }
 \arguments{

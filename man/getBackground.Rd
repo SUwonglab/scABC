@@ -5,7 +5,7 @@
 \title{compute background counts matrix}
 \usage{
 getBackground(bamfiles, peaks, upstream = 5e+05, downstream = 5e+05,
-  byReadGroup = FALSE)
+  byReadGroup = FALSE, VERBOSE = FALSE, PAIRED = FALSE)
 }
 \arguments{
 \item{bamfiles}{a vector of filenames of input bamfiles}

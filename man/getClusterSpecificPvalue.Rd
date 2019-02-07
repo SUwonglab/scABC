@@ -4,9 +4,9 @@
 \alias{getClusterSpecificPvalue}
 \title{get cluster specific pvalues}
 \usage{
-getClusterSpecificPvalue(ForeGround, cluster_assignments, background_medians,
-  landmark = NULL, maxiter = 1000, thresMLE = 10^-3, thresMAP = 10^-5,
-  quiet = FALSE)
+getClusterSpecificPvalue(ForeGround, cluster_assignments,
+  background_medians, landmark = NULL, maxiter = 1000,
+  thresMLE = 10^-3, thresMAP = 10^-5, quiet = FALSE)
 }
 \arguments{
 \item{ForeGround}{matrix of peaks by cells counts}
