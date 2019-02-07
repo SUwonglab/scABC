@@ -5,19 +5,49 @@ select_top <-function(x, n_top){
   return(x);
 }
 
+# correlation usign sparse matrix
+# see https://github.com/timydaley/SparseSpearmanCorrelation for details
+sparseSpearmanCor <- function(sparseMat){
+  Y = as(sparseMat, "dgTMatrix")
+  nCells = dim(Y)[2]
+  nRegions = dim(Y)[1]
+  i = Y@i
+  j = Y@j
+  x = Y@x
+  rankColMeans = rep(0, times = nCells)
+  # go through x in row format, replace entries with their ranks, then add #zeros/2 -1/2
+  for(k in unique(j)){
+    w = which(j == k)
+    r = rank(x[w])
+    z = dim(Y)[1] - length(w)
+    r = r + z/2 - 1/2
+    Y@x[w] = r
+    rankColMeans[k + 1] = sum(r)/nRegions
+  }
+  rankColSums = rankColMeans*nRegions
+  covmat = tcrossprod(rankColMeans, (-2*rankColSums + nRegions*rankColMeans))
+  crosspmat = as.matrix(Matrix::crossprod(Y))
+  covmat = covmat + crosspmat
+  sdvec = sqrt(diag(covmat))
+  return(covmat/crossprod(t(sdvec)))
+}
+
 #' compute landmarks
 #' @name computeLandmarks
-#' @param ForeGround matrix or data frame of Foreground values
-#' @param BackGround matrix or data frame of BackGround values, one of BackGround or weights must be provided
+#' @param ForeGround sparse matrix of Foreground values
+#' @param BackGround sparse matrix of BackGround values, one of BackGround or weights must be provided
 #' @param weights a vector of weights to use for clustering, one of BackGround or weights must be provided
 #' @param nCluster number of clusters (default = 2)
 #' @param lambda weighting parameter (default = 0.1)
 #' @param nTop number of top clusters (default = 5000)
-#' @import WeightedCluster 
+#' @import Matrix
+#' @import WeightedCluster
 #' @export computeLandmarks
 computeLandmarks <- function(ForeGround, BackGround = NULL, weights = NULL, nCluster = 2, lambda = 0.1, nTop = 5000){
   # check types
-  stopifnot(is.matrix(ForeGround) || is.data.frame(ForeGround))
+  if(is.matrix(ForeGround) || is.data.frame(ForeGround)){
+    ForeGround = Matrix::Matrix(ForeGround, sparse = TRUE)
+  }
   stopifnot(!is.null(BackGround) || !is.null(weights))
   stopifnot(is.numeric(nCluster))
   if(!is.null(BackGround)){
@@ -26,19 +56,15 @@ computeLandmarks <- function(ForeGround, BackGround = NULL, weights = NULL, nClu
   else{
     stopifnot(dim(ForeGround)[2] == length(weights))
   }
-    
+
   # ensure both are matrices
-  ForeGround = as.matrix(ForeGround);
   if(!is.null(BackGround)){
-    BackGround = as.matrix(BackGround);
+    BackGround = Matrix::Matrix(BackGround, sparse = TRUE);
     weights = apply(BackGround, 2, median);
-    c = min(8, median(weights));
   }
-  else{
-    c = min(8, median(weights))
-  }
+  c = min(8, median(weights))
   # compute weighted k-medioids
-  FGdist = 1 - cor(ForeGround, method = "spearman");
+  FGdist = 1 - sparseSpearmanCor(ForeGround);
   weights = 1/(1 + exp(-(weights - c)/(c*lambda)));
   kMeds = WeightedCluster::wcKMedoids(FGdist, k = nCluster, weights = weights);
   kMedsCluster = kMeds$clustering;
@@ -61,7 +87,7 @@ computeLandmarks <- function(ForeGround, BackGround = NULL, weights = NULL, nClu
 }
 
 #' assign cells/samples to the closest package
-#' 
+#'
 #' @docType package
 #' @name assign2landmarks
 #' @param ForeGround matrix or data frame of Foreground values
@@ -70,24 +96,25 @@ computeLandmarks <- function(ForeGround, BackGround = NULL, weights = NULL, nClu
 assign2landmarks <- function(ForeGround, topLandmarks){
   unionTopLandmarks = which(rowSums(topLandmarks)>0)
   ## calculate Spearman correlation using only the landmark peaks
-  scor = cor(ForeGround[unionTopLandmarks,], topLandmarks[unionTopLandmarks,], method = "spearman")
+  scor = cor(as.matrix(ForeGround[unionTopLandmarks,]), topLandmarks[unionTopLandmarks,], method = "spearman")
   return(unlist(apply(scor, 1, which.max)))
 }
 
 #' get cluster specific pvalues
-#' 
+#'
 #' @param ForeGround matrix of peaks by cells counts
-#' @param cluster_assignments matrix of cluster indicator membership 
+#' @param cluster_assignments matrix of cluster indicator membership
 #' @param background_medians median background values for each cell
 #' @param landmark optional. If landmark is provided, we only do hypothesis testing on the union of landmark peaks
 #' @param maxiter maximum number of iterations, default: 1000
 #' @param thresMLE numerical threshhold for convergence of MLE, default: 10^-3
 #' @param thresMAP numerical threshhold for convergence of MAP, default: 10^-5
 #' @param quiet boolean variable indicating whether to print error statements or not, default: FALSE
+#' @import Matrix
 #' @return list of estimated betas and their standard deviations (sigma), and the p-values testing whether each peak is specific to each cluster
 #' @export getClusterSpecificPvalue
-getClusterSpecificPvalue <- function(ForeGround, cluster_assignments, background_medians, 
-                                     landmark=NULL, maxiter=1000, thresMLE=10^-3, 
+getClusterSpecificPvalue <- function(ForeGround, cluster_assignments, background_medians,
+                                     landmark=NULL, maxiter=1000, thresMLE=10^-3,
                                      thresMAP=10^-5, quiet=FALSE){
   ## the main function for peak selection
   ## data is nPeaks(p) by Cells(n)
@@ -98,38 +125,38 @@ getClusterSpecificPvalue <- function(ForeGround, cluster_assignments, background
     ## take union of the landmark peaks
     unionlandmark <- which(rowSums(landmark)!=0)
     p <- nrow(ForeGround)
-    ForeGround <- ForeGround[unionlandmark,]
+    ForeGround <- as.matrix(ForeGround[unionlandmark,])
   } else {
   }
-  
+
   ForeGround <- t(ForeGround) # make ForeGround n by p
-  
-  which2remove = which(background_medians>0)
+
+  which2keep = which(background_medians>0)
   ## remove the background_medians=0 samples
-  ForeGround <- ForeGround[which2remove,]
-  cluster_assignments <- cluster_assignments[which2remove]
-  background_medians <- background_medians[which2remove]
-  
+  ForeGround <- ForeGround[which2keep,]
+  cluster_assignments <- cluster_assignments[which2keep]
+  background_medians <- background_medians[which2keep]
+
   ## get beta_MLE
   if (!quiet){
-    cat("\nEstimating beta MLE\n")  
+    cat("\nEstimating beta MLE\n")
   }
   betaMLE_ini <- matrix(0, nrow=length(unique(cluster_assignments)), ncol=ncol(ForeGround))
   betaMLE <- getbetaMLE(data=ForeGround, cluster=cluster_assignments, background_medians=background_medians, beta_ini=betaMLE_ini, maxiter=maxiter, thres=thresMLE, quiet=quiet)
-  
+
   ## get the empirical prior sigma
   sigmas <- getSigmaPrior(betaMLE)
-  
+
   ## get beta_MAP and the p-value
   if (!quiet){
     cat("\nEstimating beta MAP\n")
   }
   betaMAP_ini <- rbind(0, matrix(0, nrow=length(unique(cluster_assignments)), ncol=ncol(ForeGround)))
-  result <- getbetaMAP(data=ForeGround, cluster=cluster_assignments, 
-                       background_medians=background_medians, sigmas=sigmas, 
-                       beta_ini=betaMAP_ini, maxiter=maxiter, thres=thresMAP, 
+  result <- getbetaMAP(data=ForeGround, cluster=cluster_assignments,
+                       background_medians=background_medians, sigmas=sigmas,
+                       beta_ini=betaMAP_ini, maxiter=maxiter, thres=thresMAP,
                        quiet=quiet)
-  
+
   if (!is.null(landmark)){
     betaMAP <- matrix( nrow=length(unique(cluster_assignments))+1, ncol=p )
     pvalue <- matrix( nrow=p, ncol=length(unique(cluster_assignments)) )
@@ -144,8 +171,8 @@ getClusterSpecificPvalue <- function(ForeGround, cluster_assignments, background
 }
 
 
-getbetaMLE <- function(data, cluster, background_medians, 
-                       beta_ini = 1, maxiter = 1000, 
+getbetaMLE <- function(data, cluster, background_medians,
+                       beta_ini = 1, maxiter = 1000,
                        thres = 1e-5, quiet = TRUE){
   ## data is n by p
   ## cluster is the cluster membership matrix, length n. Take entries 1 to nCluster
@@ -153,29 +180,29 @@ getbetaMLE <- function(data, cluster, background_medians,
   p <- ncol(data)
   x <- getdesign(cluster)
   beta <- beta_ini
-  betaDiffs <- c() 
+  betaDiffs <- c()
   percConverged <- c()
   converged_flag <- rep(0, p)
-  
+
   converged <- 0
   iter <- 1
   while (!converged & iter<maxiter){
-    mu <- background_medians*exp(x%*%beta) 
+    mu <- background_medians*exp(x%*%beta)
     u <- crossprod(x, data-mu)
     updateBeta <- function(r){
       if (converged_flag[r]==0 & !is.na(beta[1,r]) ){
         Jr <- crossprod(x, mu[,r]*x)
         betaDiff <- try(solve(Jr, u[,r]), silent=T)
         if (class(betaDiff)=="try-error"){
-          return( rep(NA, length(beta[,r])) )    
+          return( rep(NA, length(beta[,r])) )
         } else {
-          return(beta[,r] + betaDiff)  
+          return(beta[,r] + betaDiff)
         }
       } else {
         return(beta[,r])
       }
     }
-    
+
     betaPre <- beta
     beta <- sapply(1:p, updateBeta)
     betaDiffs <- rbind(betaDiffs, colSums(abs(beta - betaPre)) )
@@ -183,9 +210,9 @@ getbetaMLE <- function(data, cluster, background_medians,
     converged_flag[which(is.na(converged_flag))] <- 0
     singular_flag <- is.na(beta[1,]) + 0
     percConverged <- c(percConverged, sum(converged_flag[which(singular_flag==0)])/sum(singular_flag==0) )
-    
+
     if (!quiet){
-      cat("\r", round(percConverged[length(percConverged)]*100), "%", "converged")  
+      cat("\r", round(percConverged[length(percConverged)]*100), "%", "converged")
     }
     if (length(percConverged) > 0 & percConverged[length(percConverged)]==1){
       converged <- 1
@@ -209,10 +236,10 @@ getdesign <- function(cluster){
 getSigmaPrior <- function(beta, q=0.05){
   ## get the empirical prior estimate using quantile matching
   ## q is the quantile to match
-  
+
   ## center each column in beta
   betaC <- t(t(beta) - colMeans(beta))
-  ## 
+  ##
   sigmas <- rep(0, nrow(betaC))
   for (i in 1:nrow(betaC)){
     tmp <- betaC[i,]
@@ -227,25 +254,25 @@ getbetaMAP <- function(data, cluster, background_medians, sigmas, beta_ini, maxi
   ## beta_ini includes the intercept
   ## cluster is the cluster membership matrix, length n. Take entries 1 to nCluster
   ## background_medians corresponds to h_i, here it is a vector of length n
-  
+
   p <- ncol(data)
   x <- getdesign(cluster)
   ## add the intercept in x
   x <- cbind(1, x)
   ## get lambda
   lambda <- c(0, 1/sigmas^2)
-  
+
   beta <- beta_ini
   betaDiffs <- c()
   percConverged <- c()
   converged_flag <- rep(0, p)
-  
+
   converged <- 0
   iter <- 1
   while (!converged & iter<maxiter){
-    mu <- background_medians*exp(x%*%beta) 
+    mu <- background_medians*exp(x%*%beta)
     z <- log(mu/background_medians) + (data-mu)/mu
-    
+
     updateBetaRidge <- function(r){
       if (converged_flag[r]==0){
         JrRidge <- crossprod(x, mu[,r]*x) + diag(lambda)
@@ -255,33 +282,33 @@ getbetaMAP <- function(data, cluster, background_medians, sigmas, beta_ini, maxi
         return(beta[,r])
       }
     }
-    
+
     betaPre <- beta
     beta <- sapply(1:p, updateBetaRidge)
     betaDiffs <- rbind(betaDiffs, colSums(abs(beta - betaPre)) )
     converged_flag <- (betaDiffs[iter,] <= thres) + 0
     percConverged <- c(percConverged, sum(converged_flag)/p )
-    
+
     if (!quiet){
-      cat("\r", round(percConverged[length(percConverged)]*100), "%", "converged")  
+      cat("\r", round(percConverged[length(percConverged)]*100), "%", "converged")
     }
-    
+
     if (length(percConverged) > 0 & percConverged[length(percConverged)]==1){
       converged <- 1
     }
     iter <- iter + 1
   }
-  mu <- background_medians*exp(x%*%beta) 
-  
+  mu <- background_medians*exp(x%*%beta)
+
   ## get all the contrast matrices and cluster label for each contrast
   nCluster <- length(unique(cluster))
   tmp <- getContrast(nCluster)
   constrasts <- tmp$constrasts
-  
+
   ## pad the intercept with 0 in the constrast
   constrasts <- cbind(0, constrasts)
   constrastsCluster <- tmp$constrastsCluster
-  
+
   calRidgePvalueA <- function(r){
     ## calculates the p-value for a small hypothesis
     if ( !is.na(beta[1,r]) ){
@@ -289,7 +316,7 @@ getbetaMAP <- function(data, cluster, background_medians, sigmas, beta_ini, maxi
       JrRidgeInv <- solve(Jr + diag(lambda))
       covRidge <- JrRidgeInv%*%Jr%*%JrRidgeInv
       ##
-      betaC <- constrasts%*%matrix(beta[,r], ncol=1)  
+      betaC <- constrasts%*%matrix(beta[,r], ncol=1)
       CcovC <- constrasts%*%covRidge%*%t(constrasts)
       SEbetaC <- sqrt(diag(CcovC))
       ##
@@ -302,13 +329,13 @@ getbetaMAP <- function(data, cluster, background_medians, sigmas, beta_ini, maxi
   if (!quiet){
     cat("\nCalculating the p-values\n")
   }
-  pvsA <- sapply(1:p, calRidgePvalueA) 
+  pvsA <- sapply(1:p, calRidgePvalueA)
   ## get the p-value for the large null hypothesis by taking maximum
   if (nCluster>2){
     pvs <- c()
     for (i in 1:nCluster){
       pvs <- cbind(pvs, apply(pvsA[which(constrastsCluster==i),], 2, max))
-    }  
+    }
   } else {
     pvs <- t(pvsA)
   }
@@ -333,39 +360,39 @@ getContrast <- function(nCluster){
 }
 
 #' get gap statistic and choose best cluster
-#' @param ForeGround matrix or data frame of ForeGround values
+#' @param ForeGround sparse matrix ForeGround values
 #' @param BackGroundMedian median of background values to compute weighting
 #' @param nClusters vector of clusters to try, default: 1:10
 #' @param nPerm number of permutation to perform, default: 10
 #' @param nTop the number of top features to use in the clustering
-#' @return list of gap stat stuff 
+#' @return list of gap stat stuff
 #' @export getGapStat
-getGapStat <- function(ForeGround, BackGroundMedian, nClusters=1:10, 
+getGapStat <- function(ForeGround, BackGroundMedian, nClusters=1:10,
                        nPerm=20, nTop = 5000, quiet=FALSE){
   ## sort nClusters from small to large
   nClusters <- sort(nClusters, decreasing=FALSE)
-  
+
   ##
   lambda <- 0.1
   c <- min(8, quantile(BackGroundMedian, 0.5))
   W <- 1/(1+exp(-(BackGroundMedian-c)/(lambda*c)))
-  top_features = head(order(apply(ForeGround, 1, sum), decreasing = TRUE), nTop)
-  distS <- 1-cor(ForeGround[top_features,], method="spearman")
-  
+  top_features = head(order(Matrix::rowSums(ForeGround), decreasing = TRUE), nTop)
+  distS <- 1-cor(as.matrix(ForeGround[top_features,]), method="spearman")
+
   ## function for calculating the objective
   calObj <- function(cluster, distMatrix, weight, nTop){
     ## may encounter problem when there is singleton
     diag(distMatrix) <- 0
-    medoids <- unique(cluster)  
+    medoids <- unique(cluster)
     Obj <- 0
     for (medoid in medoids){
-      disttmp <- distMatrix[medoid,which(cluster==medoid)] 
+      disttmp <- distMatrix[medoid,which(cluster==medoid)]
       weighttmp <- weight[which(cluster==medoid)]
       Obj <- Obj + sum(disttmp*weighttmp)
     }
     return(Obj)
   }
-  
+
   ## turn off warning for wcKMedoids
   options(warn=-1)
   ##
@@ -373,27 +400,27 @@ getGapStat <- function(ForeGround, BackGroundMedian, nClusters=1:10,
     cat("\nCalculate gap statistic for data\n")
   }
   ObjData_nClusters <- c()
-  count <- 0 
+  count <- 0
   for (nCluster in nClusters){
     if (nCluster==1){
       ObjData <- min(rowSums(t(t(distS)*W)))
-      ObjData_nClusters <- c(ObjData_nClusters, ObjData) 
+      ObjData_nClusters <- c(ObjData_nClusters, ObjData)
     } else {
       resultW <- wcKMedoids(distS, k=nCluster, weights=W)
       clusterW <- resultW$clustering
-      ObjData <- calObj(cluster=clusterW, distMatrix=distS, weight=W) 
-      ObjData_nClusters <- c(ObjData_nClusters, ObjData) 
+      ObjData <- calObj(cluster=clusterW, distMatrix=distS, weight=W)
+      ObjData_nClusters <- c(ObjData_nClusters, ObjData)
     }
     count <- count + 1
     if (!quiet){
       cat("\r", round((count/length(nClusters))*100), "%","completed")
     }
   }
-  
+
   if (!quiet){
     cat("\nCalculate gap statistic for permutation\n")
   }
-  
+
   ObjPerm_nClusters <- matrix(nrow=nPerm, ncol=length(nClusters))
   for (perm in 1:nPerm){
     ForeGroundPerm <- t(apply(ForeGround[top_features, ], 1, sample))
@@ -407,31 +434,31 @@ getGapStat <- function(ForeGround, BackGroundMedian, nClusters=1:10,
       }
       if (nCluster==1){
         ObjP <- min(rowSums(t(t(distP)*W)))
-        ObjPA <- c(ObjPA, ObjP)  
+        ObjPA <- c(ObjPA, ObjP)
       } else {
         resultP <- wcKMedoids(distP, k=nCluster, weights=W)
         clusterP <- resultP$clustering
-        ObjP <- calObj(cluster=clusterP, distMatrix=distP, weight=W) 
-        ObjPA <- c(ObjPA, ObjP)  
+        ObjP <- calObj(cluster=clusterP, distMatrix=distP, weight=W)
+        ObjPA <- c(ObjPA, ObjP)
       }
     }
     ObjPerm_nClusters[perm,] <- ObjPA
   }
   ## turn on warning
   options(warn=0)
-  
+
   ## get the optimal number of clusters
   ymean <- apply(log(ObjPerm_nClusters), 2, mean) - log(ObjData_nClusters)
   ysd <- apply(log(ObjPerm_nClusters), 2, sd)
-  
+
   flag <- ymean[-length(nClusters)] >= (ymean - ysd)[-1]
   if (sum(flag)){
-    nClusterOptimal <- min(which(flag)) 
+    nClusterOptimal <- min(which(flag))
   } else {
     warning("Increase the maximum cluster number")
     nClusterOptimal <- max(nClusters)
   }
-  
+
   return(list(ObjData=ObjData_nClusters, ObjPerm=ObjPerm_nClusters, nClusterOptimal=nClusterOptimal))
 }
 
@@ -439,14 +466,14 @@ getGapStat <- function(ForeGround, BackGroundMedian, nClusters=1:10,
 #' @param GapStat output of getGapStat
 #' @param nClusters vector of clusters to try, default: 1:10
 #' @param main title of plot
-#' @return nothing, just plotting 
+#' @return nothing, just plotting
 #' @export plotGapStat
 plotGapStat <- function(GapStat, nClusters, main, fold=1, cex=0.3, lty=2){
   ObjPerm <- GapStat$ObjPerm
   ObjData <- GapStat$ObjData
   ymean <- apply(log(ObjPerm), 2, mean) - log(ObjData)
   ysd <- apply(log(ObjPerm), 2, sd)
-  
+
   plot(nClusters, ymean,
        ylim=range(c(ymean-ysd, ymean+ysd)),
        pch=19, xlab="Number of clusters", ylab="Gap", cex=cex,
