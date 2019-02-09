@@ -115,10 +115,14 @@ getCountsByReadGroup <- function(bamfile, peaks, tag, tags = NULL, PAIRED = FALS
 #' @keywords counts
 #' @export getCountsMatrix
 getCountsMatrix <- function(bamfiles, peaks, PAIRED = FALSE,
-                             byReadGroup = FALSE, VERBOSE = FALSE){
+                            byReadGroup = FALSE, 
+                            RGtag = 'RG',
+                            tags2include = NULL, 
+                            VERBOSE = FALSE){
   peaks.gr = peaks2GRanges(peaks)
   if(byReadGroup){
-    counts_mat = getCountsByReadGroup2(bamfile, peaks.gr);
+    counts_mat = getCountsByReadGroup(bamfile, peaks.gr, tag = RGtag, 
+                                      tags2include);
     rownames(counts_mat) = peaks$name
   }
   else{
@@ -221,7 +225,7 @@ filterSamples <- function(ForeGround, BackGround, readsFGthresh=NULL){
 
 #' filter peaks
 #'
-#' @param ForeGround matrix or data frame of Foreground values
+#' @param ForeGround sparse matrix of Foreground values
 #' @param peaks a bed format file of peaks
 #' @param nreads_thresh threshold of the number of reads
 #' @param ncells_thresh threshold of the number of cells
