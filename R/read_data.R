@@ -123,6 +123,9 @@ getCountsMatrix <- function(bamfiles, peaks, PAIRED = FALSE,
                             tags2include = NULL, 
                             VERBOSE = FALSE){
   peaks.gr = peaks2GRanges(peaks)
+  if(VERBOSE){
+    message("beginning reading in counts\n")
+  }
   if(byReadGroup){
     if(VERBOSE){
       message("getting counts by read group\n")
