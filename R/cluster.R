@@ -90,7 +90,7 @@ computeLandmarks <- function(ForeGround, BackGround = NULL, weights = NULL, nClu
 #'
 #' @docType package
 #' @name assign2landmarks
-#' @param ForeGround matrix or data frame of Foreground values
+#' @param ForeGround sparse matrix of Foreground values
 #' @param topLandmarks output from compute_landmarks
 #' @export assign2landmarks
 assign2landmarks <- function(ForeGround, topLandmarks){
@@ -102,7 +102,7 @@ assign2landmarks <- function(ForeGround, topLandmarks){
 
 #' get cluster specific pvalues
 #'
-#' @param ForeGround matrix of peaks by cells counts
+#' @param ForeGround sparse matrix of peaks by cells counts
 #' @param cluster_assignments matrix of cluster indicator membership
 #' @param background_medians median background values for each cell
 #' @param landmark optional. If landmark is provided, we only do hypothesis testing on the union of landmark peaks
@@ -365,6 +365,7 @@ getContrast <- function(nCluster){
 #' @param nClusters vector of clusters to try, default: 1:10
 #' @param nPerm number of permutation to perform, default: 10
 #' @param nTop the number of top features to use in the clustering
+#' @import WeightedCluster
 #' @return list of gap stat stuff
 #' @export getGapStat
 getGapStat <- function(ForeGround, BackGroundMedian, nClusters=1:10,
@@ -406,7 +407,7 @@ getGapStat <- function(ForeGround, BackGroundMedian, nClusters=1:10,
       ObjData <- min(rowSums(t(t(distS)*W)))
       ObjData_nClusters <- c(ObjData_nClusters, ObjData)
     } else {
-      resultW <- wcKMedoids(distS, k=nCluster, weights=W)
+      resultW <- WeightedCluster::wcKMedoids(distS, k=nCluster, weights=W)
       clusterW <- resultW$clustering
       ObjData <- calObj(cluster=clusterW, distMatrix=distS, weight=W)
       ObjData_nClusters <- c(ObjData_nClusters, ObjData)
@@ -436,7 +437,7 @@ getGapStat <- function(ForeGround, BackGroundMedian, nClusters=1:10,
         ObjP <- min(rowSums(t(t(distP)*W)))
         ObjPA <- c(ObjPA, ObjP)
       } else {
-        resultP <- wcKMedoids(distP, k=nCluster, weights=W)
+        resultP <- WeightedCluster::wcKMedoids(distP, k=nCluster, weights=W)
         clusterP <- resultP$clustering
         ObjP <- calObj(cluster=clusterP, distMatrix=distP, weight=W)
         ObjPA <- c(ObjPA, ObjP)
