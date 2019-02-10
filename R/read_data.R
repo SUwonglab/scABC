@@ -68,14 +68,15 @@ getTagCounts <- function(RGtag, bamfile, peaks){
 #  return(counts)
 #}
 
-getCountsByReadGroup <- function(bamfile, peaks, tag, tags = NULL, PAIRED = FALSE, VERBOSE = FALSE){
+getCountsByReadGroup <- function(bamfile, peaks, RGtag, tags = NULL, PAIRED = FALSE, VERBOSE = FALSE){
   scanned <- scanBam(bamfile,
                      param = ScanBamParam(what = c("rname", "pos", "strand", "qwidth"),
-                                          tag = tag))[[1]]
+                                          tag = RGtag))[[1]]
   if(is.null(tags)){
     tags = unique(scanned$tag[tag])
   }
-  counts_mat = matrix(nrow = length(peaks), ncol = length(RGtags))
+  counts_mat = Matrix::Matrix(0, nrow = length(peaks), 
+                              ncol = length(tags), sparse = TRUE)
   for(i in 1:length(RGtags)){
     tag = RGtags[i]
     if(VERBOSE){
@@ -105,6 +106,8 @@ getCountsByReadGroup <- function(bamfile, peaks, tag, tags = NULL, PAIRED = FALS
 #' @param peaks a bed15 format file returned from select_peaks
 #' @param paired a boolean variable indicating whether the experiment was paired end or not
 #' @param byReadGroup boolean variable indicating whether or not individual experiments are separated by read group
+#' @param RGtag read group tag, default = RG
+#' @param tags2include read groups to include, if only a subset is desired
 #' @param VERBOSE a boolean variable to indicate whether to print update messages
 #' @return a matrix of chrom, start, end of peaks followed by counts of each bam file in bamfiles
 #' @import Rsamtools
@@ -121,6 +124,8 @@ getCountsMatrix <- function(bamfiles, peaks, PAIRED = FALSE,
                             VERBOSE = FALSE){
   peaks.gr = peaks2GRanges(peaks)
   if(byReadGroup){
+    bamfile = bamfiles;
+    stopifnot(length(bamfile == 1))
     counts_mat = getCountsByReadGroup(bamfile, peaks.gr, tag = RGtag, 
                                       tags2include);
     rownames(counts_mat) = peaks$name
