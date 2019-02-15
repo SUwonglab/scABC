@@ -77,8 +77,8 @@ getCountsByReadGroup <- function(bamfile, peaks, RGtag, tags = NULL, PAIRED = FA
   }
   counts_mat = Matrix::Matrix(0, nrow = length(peaks), 
                               ncol = length(tags), sparse = TRUE)
-  for(i in 1:length(RGtags)){
-    tag = RGtags[i]
+  for(i in 1:length(tags)){
+    tag = tags[i]
     if(VERBOSE){
       message("Processing tag ", tag)
     }
@@ -133,7 +133,7 @@ getCountsMatrix <- function(bamfiles, peaks, PAIRED = FALSE,
     }
     stopifnot(length(bamfiles) == 1)
     counts_mat = getCountsByReadGroup(bamfiles, peaks.gr, RGtag = RGtag, 
-                                      tags2include);
+                                      tags = tags2include);
     rownames(counts_mat) = peaks$name
   }
   else{
