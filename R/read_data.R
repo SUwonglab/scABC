@@ -124,7 +124,7 @@ getCountsMatrix <- function(bamfiles, peaks, PAIRED = FALSE,
                             VERBOSE = FALSE){
   peaks.gr = peaks2GRanges(peaks)
   if(VERBOSE){
-    print("beginning reading in counts\n")
+    message("beginning reading in counts\n")
   }
   if(byReadGroup){
     if(VERBOSE){
@@ -132,7 +132,7 @@ getCountsMatrix <- function(bamfiles, peaks, PAIRED = FALSE,
       message("read group tag = ", RGtag, "\n")
     }
     stopifnot(length(bamfiles) == 1)
-    counts_mat = getCountsByReadGroup(bamfiles, peaks.gr, tag = RGtag, 
+    counts_mat = getCountsByReadGroup(bamfiles, peaks.gr, RGtag = RGtag, 
                                       tags2include);
     rownames(counts_mat) = peaks$name
   }
