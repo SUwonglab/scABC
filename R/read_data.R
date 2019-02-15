@@ -69,8 +69,8 @@ getTagCounts <- function(RGtag, bamfile, peaks){
 #}
 
 getCountsByReadGroup <- function(bamfile, peaks, RGtag, tags = NULL, PAIRED = FALSE, VERBOSE = FALSE){
-  scanned <- scanBam(bamfile,
-                     param = ScanBamParam(what = c("rname", "pos", "strand", "qwidth"),
+  scanned <- Rsamtools::scanBam(bamfile,
+                     param = Rsamtools::ScanBamParam(what = c("rname", "pos", "strand", "qwidth"),
                                           tag = RGtag))[[1]]
   if(is.null(tags)){
     tags = unique(scanned$tag[tag])
