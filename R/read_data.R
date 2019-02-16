@@ -73,7 +73,7 @@ getCountsByReadGroup <- function(bamfile, peaks, RGtag, tags = NULL, PAIRED = FA
                      param = Rsamtools::ScanBamParam(what = c("rname", "pos", "strand", "qwidth"),
                                           tag = RGtag))[[1]]
   if(is.null(tags)){
-    tags = unique(scanned$tag[tag])
+    RGtags = unique(unlist(scanned$tag[RGtag]))
   }
   counts_mat = Matrix::Matrix(0, nrow = length(peaks), 
                               ncol = length(tags), sparse = TRUE)
@@ -82,17 +82,17 @@ getCountsByReadGroup <- function(bamfile, peaks, RGtag, tags = NULL, PAIRED = FA
     if(VERBOSE){
       message("Processing tag ", tag)
     }
-    match_RG <- which(scanned$tag$RG == tag)
+    match_RG <- which(scanned$tag[[RGtag]] == tag)
     # convert bamfiles to Genomic Ranges
-    bam.gr = GRanges(seqnames = scanned$rname[match_RG],
-                     IRanges(start = sapply(match_RG, function(i) ifelse(scanned$strand[i] == "-",
+    bam.gr = GenomicRanges::GRanges(seqnames = scanned$rname[match_RG],
+                                    IRanges::IRanges(start = sapply(match_RG, function(i) ifelse(scanned$strand[i] == "-",
                                                                          scanned$pos[i] + scanned$qwidth[i] - 1,
                                                                          scanned$pos[i])),
                              width = scanned$qwidth[match_RG]))
-    counts_mat[,i] = countOverlaps(peaks, bam.gr, type = "any", ignore.strand = TRUE)
+    counts_mat[,i] = GenomicRanges::countOverlaps(peaks, bam.gr, type = "any", ignore.strand = TRUE)
   }
  # counts = do.call(cbind, lapply(RGtags, function(x) getTagCounts(x, bamfile, peaks)))
-  colnames(counts_mat) = RGtags
+  colnames(counts_mat) = tags
 
   return(counts_mat)
 }
